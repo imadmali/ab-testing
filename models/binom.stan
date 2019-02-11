@@ -2,18 +2,18 @@ data {
   int<lower=0> N;
   int y[N];
   int trials[N];
-  real theta_loc;
-  real<lower=0> theta_scale;
+  real shape1;
+  real<lower=0> shape2;
 }
 parameters {
   real theta;
 }
 model {
   target+= binomial_lpmf(y | trials, theta);
-  target+= normal_lpdf(theta | theta_loc, theta_scale);
+  target+= beta_lpdf(theta | shape1, shape2);
 }
 generated quantities {
-  real y_hat[N];
+  int y_hat[N];
   for (n in 1:N)
     y_hat[n] = binomial_rng(trials[n], theta);
 }
