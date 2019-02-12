@@ -1,6 +1,5 @@
 library(rstan)
 
-
 # Data --------------------------------------------------------------------
 
 x1 <- c(5.820883, 2.667825, 3.332511, 3.388233, 7.976444,
@@ -44,6 +43,20 @@ samples3 <- as.matrix(fit3)
 # Post-process ------------------------------------------------------------
 
 # quantile(samples1[,"mu"] - samples2[,"mu"], prob = c(0.05,0.95,0.25,0.75))
+
+pdf("figs/norm1_mu.pdf", width = 8, height = 6)
+hist(samples1[,"mu"], breaks = 50,
+     main = "mu",
+     xlab = "mu")
+abline(v = mean(samples1[,"mu"]), col = "red", lwd = 3)
+dev.off()
+
+pdf("figs/norm1_sigma.pdf", width = 8, height = 6)
+hist(samples1[,"sigma"], breaks = 50,
+     main = "sigma",
+     xlab = "sigma")
+abline(v = mean(samples1[,"sigma"]), col = "red", lwd = 3)
+dev.off()
 
 plot_samples <- function(s, ...) {
   hist(s, ...)

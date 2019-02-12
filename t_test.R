@@ -1,6 +1,14 @@
-x <- rnorm(10, 4.5, 2)
+# Computing the one sample t-test and associated p-value
+
+# Data
+x <- c(5.820883, 2.667825, 3.332511, 3.388233, 7.976444,
+       5.925112, 6.465919, 7.064625, 3.012066, 2.771472)
+# x <- rnorm(10, 4.5, 2)
 mu_h <- 4.5
 
+#' @param x Vector of normally distributed data.
+#' @param mu Hypothesized mean.
+#' @return Vector of length one containing a double.
 t_test <- function(x, mu) {
   x_bar <- mean(x)
   x_sd <- sd(x)

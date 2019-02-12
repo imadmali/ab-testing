@@ -44,7 +44,7 @@
 
 \begin{document}
 \maketitle
-\abstract{\noindent This paper outlines common misconceptions of Frequentist statistical significance and proposes a more intuitive Bayesian alternative. At a high-level Frequentist methods focus on the distribution of the test statsitic as opposed to the parameter of interest, whereas the methods proposed here allow the researcher to perform inference directly on the parameter of interest.}
+\abstract{\noindent This paper outlines common misconceptions of Frequentist approaches to statistical significance and proposes a more intuitive Bayesian alternative. At a high-level Frequentist methods focus on the distribution of the test statsitic as opposed to the parameter of interest, whereas the methods proposed here allow the researcher to perform inference directly on the parameter of interest.}
 \tableofcontents
 \newpage
 % CaUSTOM SHORTCUTS
@@ -60,13 +60,13 @@
 
 Some literature reviewy stuff. \\
 
-\noindent In the following section we discuss common misconceptions surrounding test statistics, p-values, and generally speaking the misuse of the term statistical significance. We then show an alternative approach under the Bayesian framework to evaluate significant differences in parameters. Finally, we extend this to how we can deal with the significance of parameters in generalized linear regression models. \\
+\noindent In the following section we discuss common misconceptions surrounding test statistics, p-values, and generally speaking the misuse of the term statistical significance. The following section discusses what statistical significance and p-values mean using the one sample t-test as an example. We then show an alternative approach to both the one sample and two sample t-test using the Bayesian framework to evaluate a significant difference in parameters. Finally, we extend this further to show how we can deal with the significance of parameters in generalized linear regression models. \\
 
 \subsection{Misinterpreting statistical significance}
 
-\noindent A quantity is defined to be statistically significant if the test statistic computed with this quantity is unlikely to occur under the null hypothesis, where the null hypothesis assumes that there is no material difference between two quantities. What this means is that if we repeatedly draw samples of data from the population under the null hypothesis, compute the same statistic, and plot the empirical distribution of the statistic; then the statistic we computed from our original data would fall somewhere in the tails (i.e. a low probability region). One way to quantify this is to compute the proportion of the distribution that is in the tails from the computed test statistic. This quantity is known as a p-value and tells you the probability of computing a statistic under the null hypothesis that is as extreme as the one at hand. Lower p-values indicate that the computed test statistic is way out in the tail(s) of the distribution. \\
+\noindent A quantity is defined to be statistically significant if the test statistic computed with this quantity is unlikely to occur under the null hypothesis, where the null hypothesis assumes that there is no material difference between the quantity and its hypothesized value. What this means is that if we repeatedly draw samples from the population under the null hypothesis, compute the same statistic, and plot the empirical distribution of the statistic; then the statistic we computed from our original data would fall somewhere in the tails (i.e. a low probability region). One way to quantify this is to compute the proportion of the distribution that is in the tails from the computed test statistic. This quantity is known as a p-value and tells you the probability of computing a statistic under the null hypothesis that is as extreme as the one at hand. Lower p-values indicate that the computed test statistic is way out in the tail(s) of the distribution. \\
 
-\noindent In this discussion of statistical significance we have been talking about quantities that we, as applied researchers, are not really interested in; test statistics and p-values. We are more interested in the underlying quantities used to compute these statistics. It would be more appropriate to do inteference on quantities that we are actually interested in compared to statistics derived from these quantities. \\
+\noindent In this discussion of statistical significance we have been talking about quantities that we, as applied researchers, are not really interested in; test statistics and p-values. We are more interested in the underlying quantities used to compute these statistics (in the case of a one sample t-test this is the mean of the data). \\
 
 \section{Inference on Sample Parameters}
 
@@ -89,13 +89,13 @@ $$
          5.925112, 6.465919, 7.064625, 3.012066, 2.771472)
 \end{verbatim}
 
-\noindent Suppose we want to test whether the mean of these data is statistically different from a hypothesized value $\mu = 4.5$. This is what is known as a two-tailed test since we are interested in determining whether the mean is significantly greater than 4.5 or significantly less than 4.5. Applying the formula to the data gives the following t-statistic,
+\noindent Suppose we want to test whether the mean of these data is statistically different from a hypothesized value $\mu = 4.5$. This is a two-tailed test since we are interested in determining whether the mean is significantly greater than 4.5 or significantly less than 4.5. Applying the formula to the data gives the following t-statistic,
 
 $$
 \frac{4.84-4.5}{2.01/\sqrt{10}} \approx 0.5394
 $$
 
-\noindent Since we are dealing with a two-tailed test our test statistics of interest are $\mid 0.5394 \mid$ and $-\mid 0.5394 \mid$. As mentioned in the introduction, we want to determine how unlikely it is to compute test statistics more extereme than the ones we have computed. We can do this using the cumulative distribution function for the t-distribution $\Phi(\mu, \nu)$ parameterized by location $\mu$ and degrees of freedom $\nu$. Since the t-distribution is symmetric we can compute the probability of calculating a statistic less than or equal to -0.5394 under the null hypotheis and multiply this value by 2. Performing this computation yields,
+\noindent Since we are dealing with a two-tailed test our test statistics of interest are $\mid 0.5394 \mid$ and $-\mid 0.5394 \mid$. As mentioned in the introduction, we want to determine how unlikely it is to compute test statistics more extereme than the ones we have computed. We can do this by using the cumulative distribution function for the t-distribution $\Phi(\mu, \nu)$ parameterized by location $\mu$ and degrees of freedom $\nu$. Since the t-distribution is symmetric we can compute the probability of calculating a statistic less than or equal to -0.5394 under the null hypotheis and multiply this value by 2. Performing this computation yields,
 
 $$
 2 \cdot \Phi(0.5394, 10-1) \approx 0.6027
@@ -126,7 +126,7 @@ x &\sim \mathcal{N}(\mu, \sigma) \\
 \sigma &\sim \mathcal{N}^{+}(0,3)
 \end{align*}
 
-\noindent Fitting the model below to the same data sample in rstan gives samples that define the marginal posterior distributions for both $\mu$ and $\sigma$, along with the posterior predictive distribution for $x$. This distributions are illustrated in the figure below. \\
+\noindent This model can be defined in Stan as,
 
 \begin{verbatim}
                data {
@@ -154,7 +154,18 @@ x &\sim \mathcal{N}(\mu, \sigma) \\
 
 \end{verbatim}
 
-\noindent We are still interested in testing if the mean is different from the hypothesized value, 4.5. To do this we can compute sample quantiles using probabilities defined by the researcher. These \emph{uncertainty intervals} enables us to communicate the probability that the estimated mean is between two values conditional on the data and prior information. Looking at the figure below, which illustrates the 50\% and 90\% credible intervals for the location parameter, we identify that 90\% of the marginal posterior is between 3.3 and 5.7. It is at the discretion of the researcher to conclude whether this interval is satisfactory to conclude that the estimated mean is not different from 4.5. \\
+\noindent Fitting this model to the data sample in rstan gives samples that define the marginal posterior distributions for both $\mu$ and $\sigma$, along with the posterior predictive distribution for $x$. These distributions are illustrated in the figure below with the mean highlighted in red. \\
+
+\begin{figure}[H]\caption[]{Parameter samples given observed data and priors}
+\begin{minipage}{1\linewidth}
+  \centering
+\includegraphics[trim={0cm 0cm 0cm 0cm}, clip, scale=0.4]{../figs/norm1_mu.pdf}
+\includegraphics[trim={0cm 0cm 0cm 0cm}, clip, scale=0.4]{../figs/norm1_sigma.pdf}
+\footnotesize
+\end{minipage}
+\end{figure}
+
+\noindent We are still interested in testing if the mean is different from the hypothesized value, 4.5. To do this we can compute sample quantiles using probabilities defined by the researcher. These \emph{uncertainty intervals} enable us to communicate the probability that the estimated mean is between two values conditional on the data and prior information. Looking at the figure below, which illustrates the 50\% and 90\% credible intervals for the location parameter, we identify that 90\% of the marginal posterior is between 3.3 and 5.7. It is at the discretion of the researcher to conclude whether this interval is satisfactory to conclude that the estimated mean is not different from 4.5. If the 90\% uncertainty interval excluded 4.5 then we could say that there is a 90\% chance that the mean estimated from the sample is different from 4.5. \\
 
 \begin{figure}[H]\caption[]{Marginal posterior distribution of $\mu$}
 \centering
@@ -163,11 +174,11 @@ x &\sim \mathcal{N}(\mu, \sigma) \\
 \end{minipage}
 \end{figure}
 
-\noindent Aside from performing inference directly on parameters, an additional benefit with this Bayesian approach is that it enables researchers to quantify their prior information about the parameters in the model. This is particularly useful for small samples compared, where prior information has more influence over the marginal posterior distribution of the location parameter. With larger samples more narrow priors will need to be defined in order for them to have any substantial influence.
+\noindent Aside from performing inference directly on parameters, an additional benefit with the Bayesian approach is that it enables researchers to quantify their prior information about the parameters in the model. This is particularly useful for small samples, where prior information has more influence over the marginal posterior distribution of the location parameter. With larger samples more informative priors will need to be defined in order for them to have any substantial influence on the posterior distribution.
 
 \subsection{Bayesian alternative to the two sample t-test}
 
-Here we extend the one-sample test defined above to two samples. Suppose we have three data sets ($x_1$, $x_2$, and $x_3$) generated from the normal distribution.
+The one-sample approach can be extended to two samples. Suppose we have three data sets ($x_1$, $x_2$, and $x_3$) generated from the normal distribution.
 
 \begin{verbatim}
   x1 <- c(5.820883, 2.667825, 3.332511, 3.388233, 7.976444,
@@ -178,7 +189,7 @@ Here we extend the one-sample test defined above to two samples. Suppose we have
           -3.587017, -1.073344, -2.400323,  3.287509,  3.278655)
 \end{verbatim}
 
-\noindent We want to determine whether the mean of $x_1$ is different from that of $x_2$ and $x_3$. Modeling each set of data according to the approach in the previous section gives the marginal posterior distributions for the location parameters ($\mu_1$, $\mu_2$, and $\mu_3$). We can then compute the 50\% and 90\% quantiles for $\mu_1 - \mu_2$ and $\mu_1 - \mu_3$. For $\mu_1 - \mu_2$ we find that 90\% of the difference in location parameters is between -1.5 and 2.0, which means 90\% of the time we cannot confidently conclude that the means of the two samples, $x_1$ and $x_2$ are different. On the other hand the 90\% uncertainty interval for $\mu_1 - \mu_3$ is 4.0 and 7.8 so we can say that 90\% of the time there is a difference between the means of $x_1$ and $x_3$. The figure below illustrates the uncertainty interval for each of these cases.
+\noindent We want to determine whether the mean of $x_1$ is different from that of $x_2$ and $x_3$. Modeling each set of data according to the approach in the previous section gives the marginal posterior distributions for the location parameters ($\mu_1$, $\mu_2$, and $\mu_3$). We can then compute the 50\% and 90\% quantiles for $\mu_1 - \mu_2$ and $\mu_1 - \mu_3$. For $\mu_1 - \mu_2$ we find that 90\% of the difference in location parameters is between -1.5 and 2.0. This interval contains zero, which means 90\% of the time we cannot confidently conclude that the means of the two samples, $x_1$ and $x_2$ are different. On the other hand the 90\% uncertainty interval for $\mu_1 - \mu_3$ is 4.0 and 7.8 so we can say that 90\% of the time there is a difference between the means of $x_1$ and $x_3$. The figure below illustrates the uncertainty interval for each of these cases.
 
 \begin{figure}[H]\caption[]{Two-sample Inference on Location Parameters}
 \begin{minipage}{1\linewidth}
@@ -193,24 +204,26 @@ Here we extend the one-sample test defined above to two samples. Suppose we have
 
 \section{Conclusion}
 
-\noindent ...
+\noindent [Conclusion here]
 
 \pagebreak
 \section{References}
 
+\noindent [References here]
+
 \pagebreak
 \section{Appendix A - Binomial test}
 
-The example outlined above involved the t-test which required normally distributed data. Here we look into inference on count data, specifically data generated from the binomial distribution. In Frequentist statistics the test used to compare the probability of success between some realized data sample and a hypothesized value is the \emph{binomial test}. This is commonly used in \textbf{A/B testing} where researchers are interested in the determining whether there is a substantial difference in the click through rate of an online advertising campaign.
+The example outlined above involves the t-test which requires the data to be noramally distributed. Here we look into inference on count data, specifically data generated from the binomial distribution. In Frequentist statistics the test used to compare the probability of success between some realized data sample and a hypothesized value is the \emph{binomial test}. This is commonly used in \textbf{A/B testing} where researchers are interested in the determining whether there is a substantial difference in the click through rate of an online advertising campaign. \\
 
-In the context of the binomial test the p-value is calculated as,
+\noindent In the context of the binomial test the p-value is calculated as,
 
 \begin{align*}
 d &= Bin(\hat{x}, N, p_0) \\
 \mbox{p-value} &= \sum_{x=0}^{N}Bin(k, N, p_0) \mbox{ s.t. } Bin(x, N, p_0) \leq d
 \end{align*}
 
-\noindent where $x$ is the number of successes, $\hat{x}$ is the number of observed successes (data), $N$ is the number of trials, and $p_0$ is the hypothesized value for the probability of success. \\
+\noindent where $x$ is the number of successes, $\hat{x}$ is the number of observed success (datum), $N$ is the number of trials, and $p_0$ is the hypothesized value for the probability of success. \\
 
 \noindent As an example consider $x = 7$, $N = 10$, and $p_0 = 0.8$. Using the method described above we get a p-value of approximately 0.4296, preventing us from rejecting the null hypothesis that the probability of success is different from 0.8. This result is illustrated in the figure below which shows the density evaluated for each success under the hypothesized success rate. The densities that constitute the p-value are in red.
 
@@ -221,7 +234,7 @@ d &= Bin(\hat{x}, N, p_0) \\
 \end{minipage}
 \end{figure}
 
-\noindent As mentioned above, the Bayesian approach involves modeling the data with prior information. In this case, the model is $7 \sim Bin(10, p)$ with a prior distribution defined on $p$ (the Beta distribution is typically used). We can then compute the quantiles and determine whether the estimated probability of success $p$ is different from the hypothesized value $p_0 = 0.8$. In this case we cannot conclude that the estimated probability of success is different from 0.8 since 90\% the time the parameter is between 0.44 and 0.86, conditional on the data and prior information. This result is illustrated below. \\
+\noindent As mentioned in this paper, the Bayesian approach involves modeling the data with prior information. In this case, the model is $7 \sim Bin(10, p)$ with a prior distribution defined on $p$ (the Beta distribution is typically used). We can then compute the quantiles and determine whether the estimated probability of success $p$ is different from the hypothesized value $p_0 = 0.8$. In this case we cannot conclude that the estimated probability of success is different from 0.8 since 90\% the time the parameter is between 0.44 and 0.86, conditional on the data and prior information. This result is illustrated below. \\
 
 \begin{figure}[H]\caption[]{Posterior distribution of $p$}
 \centering
@@ -230,6 +243,8 @@ d &= Bin(\hat{x}, N, p_0) \\
 \end{minipage}
 \end{figure}
 
-\noindent This approach can easily be extended to multiple observations. The only difference would be to model the vector of successes (instead of a single observation) and a vector of associated trials. The inference on the probability of success parameter would be the same. \\
+\noindent Note that the hypothesized value 0.8 is not in the 50\% credible interval (0.56, 0.78). This means that 50\% of the time the success rate parameter will be different from 0.8. It is up to the researcher to determine which interval is appropriate given the problem at hand. Under the context of the click through rate example, this would mean that there is a 50\% chance we will not observe a click through rate of 0.8.\\
+
+\noindent This approach can easily be extended to multiple observations. The only difference would be to model the vector of successes (instead of a single observation) and a vector of associated trials. The inference on the probability of success parameter associated with these data would be the same. \\
 
 \end{document}

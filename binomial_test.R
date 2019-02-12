@@ -1,6 +1,13 @@
+### Computing the Binomial p-value
+
+# Data
 x <- rbinom(1, 10, 0.8)
 mu_h <- 0.8
 
+#' @param x Number of successes observed.
+#' @param n Number of trials.
+#' @param p Hypothesized success rate.
+#' @return A list containing the densities evaluated for each success \code{x} given \code{n} and \code{p}.
 binomial_p_value <- function(x, n, p) {
   d <- dbinom(0:n, 10, p)
   indx <- which(d <= dbinom(x, n, p))
