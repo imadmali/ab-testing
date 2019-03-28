@@ -9,6 +9,7 @@
 \usepackage{listings}
 \usepackage{float}
 \usepackage{sectsty}
+\usepackage[bottom]{footmisc}
 %\pagestyle{fancy}
 %\fancyhead[R]{Imad Ali}
 %\fancyhead[L]{Bayesian Win Probability in Basketball}
@@ -58,9 +59,9 @@
 
 \section{Introduction}
 
-Some literature reviewy stuff. \\
+Some literature reviewy stuff. Look into Kruschke (might have something on t-tests). Also look into Blitzstein maybe? \\
 
-\noindent In the following section we discuss common misconceptions surrounding test statistics, p-values, and generally speaking the misuse of the term statistical significance. The following section discusses what statistical significance and p-values mean using the one sample t-test as an example. We then show an alternative approach to both the one sample and two sample t-test using the Bayesian framework to evaluate a significant difference in parameters. Finally, we extend this further to show how we can deal with the significance of parameters in generalized linear regression models. \\
+\noindent In the following section we discuss common misconceptions surrounding test statistics, p-values, and generally speaking the misuse of the term statistical significance. The following section discusses what statistical significance and p-values mean using the one sample t-test as an example. We then show an alternative approach to both the one sample and two sample t-test using the Bayesian framework to evaluate a meaningful difference in parameters.\footnote{We use the term \emph{meaningful} instead of \emph{significant} to avoid confusion since the latter term as been adopted by Frequentists to indicate a meaninful difference in parameters.} Finally, we extend this further to show how we can deal with the significance of parameters in generalized linear regression models. \\
 
 \subsection{Misinterpreting statistical significance}
 
@@ -72,38 +73,38 @@ Some literature reviewy stuff. \\
 
 It is easier to talk about the process of inference in context so the one sample t-test is used as an example. First we will show how statistical significance is determined using the test and then we will outline a Bayesian alternative by modeling the data using \textbf{rstan}, the R interface to the Stan probabilistic programming language. \\
 
-\subsection{One Sample t-test}
-
-The \emph{one sample t-test} is used to test the whether the mean of a sample of data $\bar{x}$ is significantly different from some hypothesized value $\mu$. The test statistic associated with this test assumes that data $x$ is generated from the normal distribution and is calculated as,
-
-$$
-\mbox{t-statistic} = \frac{\bar{x}-\mu}{\sigma/\sqrt{n}}
-$$
-
-\noindent where $\sigma$ is the standard deviation of the data $x$ and $n$ is the sample size of the data. This statistic follows the t-distribution with $n-1$ degrees of freedom. \\
-
-\noindent Below we have a sample of ten observations generated from $\mathcal{N}(4.5,2)$.
+\noindent Below we have a sample of ten $x$ observations generated from $\mathcal{N}(\mu = 4.5, \sigma = 2)$. The parameter $\mu$ is the population mean and the parameter $\sigma$ is the population standard deviation.
 
 \begin{verbatim}
   x <- c(5.820883, 2.667825, 3.332511, 3.388233, 7.976444,
          5.925112, 6.465919, 7.064625, 3.012066, 2.771472)
 \end{verbatim}
 
-\noindent Suppose we want to test whether the mean of these data is statistically different from a hypothesized value $\mu = 4.5$. This is a two-tailed test since we are interested in determining whether the mean is significantly greater than 4.5 or significantly less than 4.5. Applying the formula to the data gives the following t-statistic,
+\subsection{One Sample t-test}
+
+The \emph{one sample t-test} is used to test the whether the mean of a sample of data $\bar{x}$ is significantly different from some hypothesized value $\mu_0$. To avoid confusion, note that $\mu_0$ differs from $\mu$ in that $\mu$ is typically unknown whereas $\mu_0$ is chosen by the researcher depending on the context of the problem. The test statistic associated with this test assumes that data $x$ is generated from the normal distribution and is calculated as,
+
+$$
+\mbox{t-statistic} = \frac{\bar{x}-\mu_0}{\sigma_s/\sqrt{n}}
+$$
+
+\noindent where $\sigma_s$ is the standard deviation of the data $x$ and $n$ is the sample size of the data. This statistic follows the t-distribution with $n-1$ degrees of freedom. \\
+
+\noindent Suppose we want to test whether the mean of these data is statistically different from a hypothesized value $\mu_0 = 4.5$. This is a two-tailed test since we are interested in determining whether the mean is significantly greater than 4.5 or significantly less than 4.5. Applying the t-statistic formula to the data yields the following value,
 
 $$
 \frac{4.84-4.5}{2.01/\sqrt{10}} \approx 0.5394
 $$
 
-\noindent Since we are dealing with a two-tailed test our test statistics of interest are $\mid 0.5394 \mid$ and $-\mid 0.5394 \mid$. As mentioned in the introduction, we want to determine how unlikely it is to compute test statistics more extereme than the ones we have computed. We can do this by using the cumulative distribution function for the t-distribution $\Phi(\mu, \nu)$ parameterized by location $\mu$ and degrees of freedom $\nu$. Since the t-distribution is symmetric we can compute the probability of calculating a statistic less than or equal to -0.5394 under the null hypotheis and multiply this value by 2. Performing this computation yields,
+\noindent Since we are dealing with a two-tailed test our test statistics of interest are $\mid 0.5394 \mid$ and $-\mid 0.5394 \mid$. As mentioned in the introduction, we want to determine how unlikely it is to compute test statistics more extereme than the one we have computed. This is done by using the cumulative distribution function for the t-distribution $F(q, \nu)$ parameterized by quantity $q$ and degrees of freedom $\nu$. Since the t-distribution is symmetric we can compute the probability of calculating a statistic less than or equal to -0.5394 under the null hypotheis and multiply this value by 2. Performing this computation yields,
 
 $$
-2 \cdot \Phi(0.5394, 10-1) \approx 0.6027
+2 \cdot F(0.5394, 10-1) \approx 0.6027
 $$
 
-\noindent So there is about a 0.6 probability that a test statistic could occur that is more extereme than the one we computed. In other words, if we repeatedly randomly sample 10 observations under the null hypotheis $x \sim \mathcal{N}(4.5, 2)$ and compute the t-statistic with this data, then 60\% of the time we will observe values more extreme than what we calculated with the orginal data sample. That is a high probability and suggests that there may be no material difference between the test statistic computed from the data sample and the test statistics computed under the null hypothesis. Under the Frequentist interpretation, this in turn implies that the mean of our sample is not statistically different from the hypothesized value, 4.5. \\
+\noindent So there is about a 0.6 probability that a test statistic could occur that is more extereme than the one we computed. In other words, if we repeatedly randomly sample 10 observations under the null hypotheis $x \sim \mathcal{N}(4.5, 2)$ and compute the t-statistic with this data, then 60\% of the time we will observe values more extreme than what we calculated with the orginal data sample. That is a high probability and suggests that there may be no material difference between the test statistic computed from the data sample and the test statistics computed under the null hypothesis. Under the Frequentist interpretation, this implies that the mean of our sample is not statistically different from the hypothesized value, 4.5. \\
 
-\noindent The distribution of t-statistics under the null hypothesis can be illustrated by sampling 10 observations from $\mathcal{N}(4.5,2)$ $B$ times, and plotting a histogram of these $B$ t-statistics. The figure below presents a plot of the distribution where $B = 10000$.
+\noindent The distribution of t-statistics under the null hypothesis can be illustrated by sampling 10 observations from $\mathcal{N}(4.5,2)$ $B$ times, and plotting a histogram of these $B$ t-statistics. The figure below illustrates such a histogram where $B = 10000$.
 
 \begin{figure}[H]\caption[]{Empirical Distribution of t-Statistic}
 \centering
@@ -112,11 +113,11 @@ $$
 \end{minipage}
 \end{figure}
 
-\noindent The red lines indicate the t-statistic computed with the data sample provided above. The dashed black lines indicate the critical values where the proportion of the distribution in the tails from those dashed lines is cumulatively 0.1. If our computed t-statistic was outside the critical values then we could say that there is less than 0.1 probability that we would calculate a statistic as extreme as the one we have calculated, thus indicating that there is a significant difference between the mean from our data and the null hypothesis. But the statistic falls inside the critical value interval, which leads us to conclude that $\bar{\mu}$ is not statistically different from 4.5. \\
+\noindent The red lines indicate the t-statistic computed with the data sample provided above. The dashed black lines indicate the critical values where the proportion of the distribution in the tails from those dashed lines is cumulatively 0.1.\footnote{This is an arbitrary choice. The researcher should choose the threshold that is appropriate given the context of the problem.} If our computed t-statistic is outside the critical values then we could say that there is less than 0.1 probability that we would calculate a statistic as extreme as the one we have calculated, suggesting that the statistic is somewhat unique. This tangentially indicates that there is a significant difference between the mean from our data $\bar{x}$ and the null hypothesis $\mu_0$. However the statistic falls inside the critical value interval, which leads to the conclusion that $\bar{x}$ is not statistically different from 4.5. \\
 
 \subsection{Bayesian alternative to the one sample t-test}
 
-The approach above focused on the test statistic, removing us from the parameter of interest $\bar{\mu}$. The Bayesian alternative to this test involves modeling the data with prior information, and performing inference on the parameter estimate $\bar{\mu}$ directly. \\
+The approach above focused on the test statistic which is derived from the parameter of interest $\bar{x}$. The Bayesian alternative to this test involves modeling the data with prior information, and performing inference directly on the parameter estimate $\bar{x}$. \\
 
 \noindent In the context of the t-test assumptions the data is modeled using the normal distribution. The prior distributions on the location and scale parameters are up to the researcher. Here, we define normal distributions on both parameters, which gives us the following model,
 
@@ -126,7 +127,51 @@ x &\sim \mathcal{N}(\mu, \sigma) \\
 \sigma &\sim \mathcal{N}^{+}(0,3)
 \end{align*}
 
-\noindent This model can be defined in Stan as,
+\noindent This model can be fit in rstanarm as follows \\
+
+\noindent [Rstanarm code here] \\
+
+\noindent Fitting this model to the data sample in rstanarm gives samples that define the posterior distribution for $\bar{x}$ and $\sigma_s$, along with the posterior predictive distribution for $x$. The marginal posterior distributions for $\bar{x}$ and $\sigma_s$ are illustrated in the figure below with the mean highlighted in red. \\
+
+\begin{figure}[H]\caption[]{Parameter samples given observed data and priors}
+\begin{minipage}{1\linewidth}
+  \centering
+\includegraphics[trim={0cm 0cm 0cm 0cm}, clip, scale=0.4]{../figs/norm1_mu.pdf}
+\includegraphics[trim={0cm 0cm 0cm 0cm}, clip, scale=0.4]{../figs/norm1_sigma.pdf}
+\footnotesize
+\end{minipage}
+\end{figure}
+
+\noindent We are still interested in testing if the mean is different from the hypothesized value $\mu_0 = 4.5$. To do this we can compute sample quantiles using probabilities defined by the researcher. These \emph{uncertainty intervals} enable us to communicate the probability that the estimated mean is between two values conditional on the data and prior information.\footnote{Uncertainty intervals are also known as credible intervals.} Looking at the figure below, which illustrates the 50\% and 90\% uncertainty intervals for the location parameter, we identify that 90\% of the marginal posterior is between 3.3 and 5.7. It is at the discretion of the researcher to determine whether this interval is satisfactory to probabilistically conclude that the marginal posterior distribution of $\bar{x}$ is not different from 4.5. If the 90\% uncertainty interval excluded 4.5 then we could say that there is a 90\% chance that the mean estimated from the sample is different from 4.5. \\
+
+\noindent An analogous approach would be to first take the difference between the $\bar{x}$ samples and $\mu_0$. Then we can compute the quantiles in a similar fashion but would now be interested to know whether or not the 90\% interval contained zero. If it does not then we can be 90\% sure that $\bar{x}$ is meaninfully different from $\mu_0$. If the interval does contain zero then the difference between $\mu_0$ and one of the samples was zero indicating that we cannot be 90\% sure that $\bar{x}$ is different from $\mu_0$.
+
+\begin{figure}[H]\caption[]{Marginal posterior distribution of $\mu$}
+\centering
+\begin{minipage}{0.6\linewidth}
+\includegraphics[trim={0cm 0cm 0cm 1.5cm}, clip, scale=0.6]{../figs/norm1.pdf}
+\end{minipage}
+\end{figure}
+
+\noindent Aside from performing inference directly on parameters, an additional benefit with the Bayesian approach is that it enables researchers to quantify their prior information about the parameters in the model. This is particularly useful for small samples, where prior information has more influence over the marginal posterior distribution of the location parameter. With larger samples more informative priors will need to be defined in order for them to have any substantial influence on the posterior distribution.
+
+\section{Posterior Predictive Distribution}
+
+\section{Conclusion}
+
+\noindent [Conclusion here]
+
+\pagebreak
+
+\section{References}
+
+\noindent [References here]
+
+\pagebreak
+
+\section{Appendix - Stan Code}
+
+\noindent The one sample t-test model that was fit using rstanarm can also be fit in rstan by defining the following model in a Stan file:
 
 \begin{verbatim}
                data {
@@ -154,29 +199,9 @@ x &\sim \mathcal{N}(\mu, \sigma) \\
 
 \end{verbatim}
 
-\noindent Fitting this model to the data sample in rstan gives samples that define the marginal posterior distributions for both $\mu$ and $\sigma$, along with the posterior predictive distribution for $x$. These distributions are illustrated in the figure below with the mean highlighted in red. \\
+\pagebreak
 
-\begin{figure}[H]\caption[]{Parameter samples given observed data and priors}
-\begin{minipage}{1\linewidth}
-  \centering
-\includegraphics[trim={0cm 0cm 0cm 0cm}, clip, scale=0.4]{../figs/norm1_mu.pdf}
-\includegraphics[trim={0cm 0cm 0cm 0cm}, clip, scale=0.4]{../figs/norm1_sigma.pdf}
-\footnotesize
-\end{minipage}
-\end{figure}
-
-\noindent We are still interested in testing if the mean is different from the hypothesized value, 4.5. To do this we can compute sample quantiles using probabilities defined by the researcher. These \emph{uncertainty intervals} enable us to communicate the probability that the estimated mean is between two values conditional on the data and prior information. Looking at the figure below, which illustrates the 50\% and 90\% credible intervals for the location parameter, we identify that 90\% of the marginal posterior is between 3.3 and 5.7. It is at the discretion of the researcher to conclude whether this interval is satisfactory to conclude that the estimated mean is not different from 4.5. If the 90\% uncertainty interval excluded 4.5 then we could say that there is a 90\% chance that the mean estimated from the sample is different from 4.5. \\
-
-\begin{figure}[H]\caption[]{Marginal posterior distribution of $\mu$}
-\centering
-\begin{minipage}{0.6\linewidth}
-\includegraphics[trim={0cm 0cm 0cm 1.5cm}, clip, scale=0.6]{../figs/norm1.pdf}
-\end{minipage}
-\end{figure}
-
-\noindent Aside from performing inference directly on parameters, an additional benefit with the Bayesian approach is that it enables researchers to quantify their prior information about the parameters in the model. This is particularly useful for small samples, where prior information has more influence over the marginal posterior distribution of the location parameter. With larger samples more informative priors will need to be defined in order for them to have any substantial influence on the posterior distribution.
-
-\subsection{Bayesian alternative to the two sample t-test}
+\section{Appendix - Bayesian Alternative to Two Sample t-Test}
 
 The one-sample approach can be extended to two samples. Suppose we have three data sets ($x_1$, $x_2$, and $x_3$) generated from the normal distribution.
 
@@ -200,19 +225,9 @@ The one-sample approach can be extended to two samples. Suppose we have three da
 \end{minipage}
 \end{figure}
 
-\section{Inference on Regression Parameters}
-
-\section{Conclusion}
-
-\noindent [Conclusion here]
-
 \pagebreak
-\section{References}
 
-\noindent [References here]
-
-\pagebreak
-\section{Appendix A - Binomial test}
+\section{Appendix A - Bayesian Alternative to Binomial test}
 
 The example outlined above involves the t-test which requires the data to be noramally distributed. Here we look into inference on count data, specifically data generated from the binomial distribution. In Frequentist statistics the test used to compare the probability of success between some realized data sample and a hypothesized value is the \emph{binomial test}. This is commonly used in \textbf{A/B testing} where researchers are interested in the determining whether there is a substantial difference in the click through rate of an online advertising campaign. \\
 
