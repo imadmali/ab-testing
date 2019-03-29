@@ -82,10 +82,10 @@ It is easier to talk about the process of inference in context so the one sample
 
 \subsection{One Sample t-test}
 
-The \emph{one sample t-test} is used to test the whether the mean of a sample of data $\bar{x}$ is significantly different from some hypothesized value $\mu_0$. To avoid confusion, note that $\mu_0$ differs from $\mu$ in that $\mu$ is typically unknown whereas $\mu_0$ is chosen by the researcher depending on the context of the problem. The test statistic associated with this test assumes that data $x$ is generated from the normal distribution and is calculated as,
+The \emph{one sample t-test} is used to test the whether the mean of a sample of data $\mu_s$ is significantly different from some hypothesized value $\mu_0$. To avoid confusion, note that $\mu_0$ differs from $\mu$ in that $\mu$ is typically unknown whereas $\mu_0$ is chosen by the researcher depending on the context of the problem. The test statistic associated with this test assumes that data $x$ is generated from the normal distribution and is calculated as,
 
 $$
-\mbox{t-statistic} = \frac{\bar{x}-\mu_0}{\sigma_s/\sqrt{n}}
+\mbox{t-statistic} = \frac{\mu_s-\mu_0}{\sigma_s/\sqrt{n}}
 $$
 
 \noindent where $\sigma_s$ is the standard deviation of the data $x$ and $n$ is the sample size of the data. This statistic follows the t-distribution with $n-1$ degrees of freedom. \\
@@ -113,38 +113,47 @@ $$
 \end{minipage}
 \end{figure}
 
-\noindent The red lines indicate the t-statistic computed with the data sample provided above. The dashed black lines indicate the critical values where the proportion of the distribution in the tails from those dashed lines is cumulatively 0.1.\footnote{This is an arbitrary choice. The researcher should choose the threshold that is appropriate given the context of the problem.} If our computed t-statistic is outside the critical values then we could say that there is less than 0.1 probability that we would calculate a statistic as extreme as the one we have calculated, suggesting that the statistic is somewhat unique. This tangentially indicates that there is a significant difference between the mean from our data $\bar{x}$ and the null hypothesis $\mu_0$. However the statistic falls inside the critical value interval, which leads to the conclusion that $\bar{x}$ is not statistically different from 4.5. \\
+\noindent The red lines indicate the t-statistic computed with the data sample provided above. The dashed black lines indicate the critical values where the proportion of the distribution in the tails from those dashed lines is cumulatively 0.1.\footnote{This is an arbitrary choice. The researcher should choose the threshold that is appropriate given the context of the problem.} If our computed t-statistic is outside the critical values then we could say that there is less than 0.1 probability that we would calculate a statistic as extreme as the one we have calculated, suggesting that the statistic is somewhat unique. This tangentially indicates that there is a significant difference between the mean from our data $\mu_s$ and the null hypothesis $\mu_0$. However the statistic falls inside the critical value interval, which leads to the conclusion that $\mu_s$ is not statistically different from 4.5. \\
 
 \subsection{Bayesian alternative to the one sample t-test}
 
-The approach above focused on the test statistic which is derived from the parameter of interest $\bar{x}$. The Bayesian alternative to this test involves modeling the data with prior information, and performing inference directly on the parameter estimate $\bar{x}$. \\
+The approach above focused on the test statistic which is derived from the parameter of interest $\mu_s$. The Bayesian alternative to this test involves modeling the data with prior information, and performing inference directly on the parameter estimate $\mu_s$. \\
 
 \noindent In the context of the t-test assumptions the data is modeled using the normal distribution. The prior distributions on the location and scale parameters are up to the researcher. Here, we define normal distributions on both parameters, which gives us the following model,
 
 \begin{align*}
-x &\sim \mathcal{N}(\mu, \sigma) \\
-\mu &\sim \mathcal{N}(0,3) \\
-\sigma &\sim \mathcal{N}^{+}(0,3)
+x &\sim \mathcal{N}(\hat{\mu}, \hat{\sigma}) \\
+\hat{\mu} &\sim \mathcal{N}(0,3) \\
+\hat{\sigma} &\sim \mathcal{N}^{+}(0,3)
 \end{align*}
 
-\noindent This model can be fit in rstanarm as follows \\
+\noindent Fitting this model to the data sample yields samples that define the posterior distribution for $\hat{\mu}$ and $\hat{\sigma}$, along with the posterior predictive distribution $\hat{x}$. Note that the mean of $\hat{\mu}$ is a point estimate and can be thought of as the Bayesian equivalent to $\mu_s$ (similarly for $\hat{\sigma}$ and $\sigma_s$).
 
-\noindent [Rstanarm code here] \\
+\noindent This model equivalent to a regression model where $x$ is the outcome and the only predictor is a single intercept. Redefining the model as a regression problem allows us to estimate the parameters in rstanarm (code below). \\
 
-\noindent Fitting this model to the data sample in rstanarm gives samples that define the posterior distribution for $\bar{x}$ and $\sigma_s$, along with the posterior predictive distribution for $x$. The marginal posterior distributions for $\bar{x}$ and $\sigma_s$ are illustrated in the figure below with the mean highlighted in red. \\
+\begin{verbatim}
+            x1 <- c(5.820883, 2.667825, 3.332511, 3.388233, 7.976444,
+                    5.925112, 6.465919, 7.064625, 3.012066, 2.771472)
+            fit <- stan_glm(x ~ 1, data = x1,
+                            prior_intercept = normal(0, 3, autoscale = FALSE),
+                            prior_aux = normal(0, 3, autoscale = FALSE))
+\end{verbatim}
+
+ The marginal posterior distributions for each of these parameters and the predictions are illustrated in the figure below. The red line illustrates the mean of each of the samples. \\
 
 \begin{figure}[H]\caption[]{Parameter samples given observed data and priors}
 \begin{minipage}{1\linewidth}
   \centering
 \includegraphics[trim={0cm 0cm 0cm 0cm}, clip, scale=0.4]{../figs/norm1_mu.pdf}
 \includegraphics[trim={0cm 0cm 0cm 0cm}, clip, scale=0.4]{../figs/norm1_sigma.pdf}
+\includegraphics[trim={0cm 0cm 0cm 0cm}, clip, scale=0.4]{../figs/norm1_pp.pdf}
 \footnotesize
 \end{minipage}
 \end{figure}
 
-\noindent We are still interested in testing if the mean is different from the hypothesized value $\mu_0 = 4.5$. To do this we can compute sample quantiles using probabilities defined by the researcher. These \emph{uncertainty intervals} enable us to communicate the probability that the estimated mean is between two values conditional on the data and prior information.\footnote{Uncertainty intervals are also known as credible intervals.} Looking at the figure below, which illustrates the 50\% and 90\% uncertainty intervals for the location parameter, we identify that 90\% of the marginal posterior is between 3.3 and 5.7. It is at the discretion of the researcher to determine whether this interval is satisfactory to probabilistically conclude that the marginal posterior distribution of $\bar{x}$ is not different from 4.5. If the 90\% uncertainty interval excluded 4.5 then we could say that there is a 90\% chance that the mean estimated from the sample is different from 4.5. \\
+\noindent We are still interested in testing if the mean is different from the hypothesized value $\mu_0 = 4.5$. To do this we can compute sample quantiles using probabilities defined by the researcher. These \emph{uncertainty intervals} enable us to communicate the probability that the estimated mean is between two values conditional on the data and prior information.\footnote{Uncertainty intervals are also known as credible intervals.} Looking at the figure below, which illustrates the 50\% and 90\% uncertainty intervals for the location parameter, we identify that 90\% of the marginal posterior is between 3.3 and 5.7. It is at the discretion of the researcher to determine whether this interval is satisfactory to probabilistically conclude that the marginal posterior distribution of $\hat{\mu}$ is not different from 4.5. If the 90\% uncertainty interval excluded 4.5 then we could say that there is a 90\% chance that the mean estimated from the sample is different from 4.5. \\
 
-\noindent An analogous approach would be to first take the difference between the $\bar{x}$ samples and $\mu_0$. Then we can compute the quantiles in a similar fashion but would now be interested to know whether or not the 90\% interval contained zero. If it does not then we can be 90\% sure that $\bar{x}$ is meaninfully different from $\mu_0$. If the interval does contain zero then the difference between $\mu_0$ and one of the samples was zero indicating that we cannot be 90\% sure that $\bar{x}$ is different from $\mu_0$.
+\noindent An analogous approach would be to first take the difference between the samples $\hat{\mu}$ and the hypothesized value $\mu_0$. Then we can compute the quantiles in a similar fashion but would now be interested to know whether or not the 90\% interval contained zero. If it does not then we can be 90\% sure that $\hat{\mu}$ is meaninfully different from $\mu_0$. If the interval does contain zero then the difference between $\mu_0$ and one of the samples was zero indicating that we cannot be 90\% sure that $\hat{\mu}$ is different from $\mu_0$.
 
 \begin{figure}[H]\caption[]{Marginal posterior distribution of $\mu$}
 \centering
@@ -153,13 +162,15 @@ x &\sim \mathcal{N}(\mu, \sigma) \\
 \end{minipage}
 \end{figure}
 
-\noindent Aside from performing inference directly on parameters, an additional benefit with the Bayesian approach is that it enables researchers to quantify their prior information about the parameters in the model. This is particularly useful for small samples, where prior information has more influence over the marginal posterior distribution of the location parameter. With larger samples more informative priors will need to be defined in order for them to have any substantial influence on the posterior distribution.
-
 \section{Posterior Predictive Distribution}
 
 \section{Conclusion}
 
-\noindent [Conclusion here]
+\noindent [Conclusion here] \\
+
+\noindent ... \\
+
+\noindent Aside from performing inference directly on parameters, an additional benefit with the Bayesian approach is that it enables researchers to quantify their prior information about the parameters in the model. This is particularly useful for small samples, where prior information has more influence over the marginal posterior distribution of the location parameter. With larger samples more informative priors will need to be defined in order for them to have any substantial influence on the posterior distribution.
 
 \pagebreak
 
