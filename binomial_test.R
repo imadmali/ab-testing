@@ -24,7 +24,7 @@ cols[which(bpv$d <= dbinom(x, 10, mu_h))] <- "red"
 barplot(bpv$d, space = 5, col = cols, border = FALSE,
         ylim = c(0,0.3),
         main = "Binomial Density Under Null Hypothesis",
-        xlab = "Success",
+        xlab = "Successes (k)",
         ylab = "Density", names.arg = 0:10)
 legend("topleft", c("density contributions to p-value","density"), col = c("red","black"), pch = c(15,15), pt.cex = c(2,2), bty = "n")
 dev.off()

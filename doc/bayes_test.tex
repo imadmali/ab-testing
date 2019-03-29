@@ -225,7 +225,7 @@ The one-sample approach can be extended to two samples. Suppose we have three da
           -3.587017, -1.073344, -2.400323,  3.287509,  3.278655)
 \end{verbatim}
 
-\noindent We want to determine whether the mean of $x_1$ is different from that of $x_2$ and $x_3$. Modeling each set of data according to the approach in the previous section gives the marginal posterior distributions for the location parameters ($\mu_1$, $\mu_2$, and $\mu_3$). We can then compute the 50\% and 90\% quantiles for $\mu_1 - \mu_2$ and $\mu_1 - \mu_3$. For $\mu_1 - \mu_2$ we find that 90\% of the difference in location parameters is between -1.5 and 2.0. This interval contains zero, which means 90\% of the time we cannot confidently conclude that the means of the two samples, $x_1$ and $x_2$ are different. On the other hand the 90\% uncertainty interval for $\mu_1 - \mu_3$ is 4.0 and 7.8 so we can say that 90\% of the time there is a difference between the means of $x_1$ and $x_3$. The figure below illustrates the uncertainty interval for each of these cases.
+\noindent We want to determine whether the mean of $x_1$ is different from that of $x_2$ and $x_3$. Modeling each set of data according to the approach in the previous section gives the marginal posterior distributions for the location parameters ($\hat{\mu}_1$, $\hat{\mu}_2$, and $\hat{\mu}_3$). We can then compute the 50\% and 90\% quantiles for $\hat{\mu}_1 - \hat{\mu}_2$ and $\hat{\mu}_1 - \hat{\mu}_3$. For $\hat{\mu}_1 - \hat{\mu}_2$ we find that 90\% of the difference in location parameters is between -1.5 and 2.0. This interval contains zero, which means 90\% of the time we cannot confidently conclude that the means of the two samples, $x_1$ and $x_2$ are different. On the other hand the 90\% uncertainty interval for $\hat{\mu}_1 - \hat{\mu}_3$ is 4.0 and 7.8 so we can say that 90\% of the time there is a difference between the means of $x_1$ and $x_3$. The figure below illustrates the uncertainty interval for each of these cases.
 
 \begin{figure}[H]\caption[]{Two-sample Inference on Location Parameters}
 \begin{minipage}{1\linewidth}
@@ -245,11 +245,11 @@ The example outlined above involves the t-test which requires the data to be nor
 \noindent In the context of the binomial test the p-value is calculated as,
 
 \begin{align*}
-d &= Bin(\hat{x}, N, p_0) \\
-\mbox{p-value} &= \sum_{x=0}^{N}Bin(k, N, p_0) \mbox{ s.t. } Bin(x, N, p_0) \leq d
+d &= Bin(x, N, p_0) \\
+\mbox{p-value} &= \sum_{k=0}^{N}Bin(k, N, p_0) \mbox{ s.t. } Bin(k, N, p_0) \leq d
 \end{align*}
 
-\noindent where $x$ is the number of successes, $\hat{x}$ is the number of observed success (datum), $N$ is the number of trials, and $p_0$ is the hypothesized value for the probability of success. \\
+\noindent where $k$ is the number of successes, $x$ is the number of observed success (datum), $N$ is the number of trials, and $p_0$ is the hypothesized value for the probability of success. \\
 
 \noindent As an example consider $x = 7$, $N = 10$, and $p_0 = 0.8$. Using the method described above we get a p-value of approximately 0.4296, preventing us from rejecting the null hypothesis that the probability of success is different from 0.8. This result is illustrated in the figure below which shows the density evaluated for each success under the hypothesized success rate. The densities that constitute the p-value are in red.
 
@@ -260,9 +260,9 @@ d &= Bin(\hat{x}, N, p_0) \\
 \end{minipage}
 \end{figure}
 
-\noindent As mentioned in this paper, the Bayesian approach involves modeling the data with prior information. In this case, the model is $7 \sim Bin(10, p)$ with a prior distribution defined on $p$ (the Beta distribution is typically used). We can then compute the quantiles and determine whether the estimated probability of success $p$ is different from the hypothesized value $p_0 = 0.8$. In this case we cannot conclude that the estimated probability of success is different from 0.8 since 90\% the time the parameter is between 0.44 and 0.86, conditional on the data and prior information. This result is illustrated below. \\
+\noindent As mentioned in this paper, the Bayesian approach involves modeling the data with prior information. In this case, the model is $7 \sim Bin(10, p)$ with a prior distribution defined on $p$ (the Beta distribution is typically used). We can then compute the quantiles and determine whether the estimated probability of success $p$ is different from the hypothesized value $p_0 = 0.8$. In this case we cannot conclude that the estimated probability of success is different from 0.8 since 90\% of the parameter samples are between 0.44 and 0.86, conditional on the data and prior information. This result is illustrated below. \\
 
-\begin{figure}[H]\caption[]{Posterior distribution of $p$}
+\begin{figure}[H]\caption[]{Posterior Distribution of $p$}
 \centering
 \begin{minipage}{0.6\linewidth}
 \includegraphics[trim={0cm 0cm 0cm 1.5cm}, clip, scale=0.6]{../figs/bin1.pdf}

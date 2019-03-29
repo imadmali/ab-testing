@@ -50,22 +50,22 @@ pp1 <- posterior_predict(fit1)
 
 pdf("figs/norm1_mu.pdf", width = 8, height = 6)
 hist(samples1[,"(Intercept)"], breaks = 50,
-     main = expression(paste("Marginal Posterior Distribution of ", bar(x))),
-     xlab = expression(bar(x)))
+     main = expression(paste("Marginal Posterior Distribution of ", hat(mu))),
+     xlab = expression(hat(mu)))
 abline(v = mean(samples1[,"(Intercept)"]), col = "red", lwd = 3)
 dev.off()
 
 pdf("figs/norm1_sigma.pdf", width = 8, height = 6)
 hist(samples1[,"sigma"], breaks = 50,
-     main = expression(paste("Marginal Posterior Distribution of ", sigma["s"])),
-     xlab = expression(paste(sigma["s"])))
+     main = expression(paste("Marginal Posterior Distribution of ", hat(sigma))),
+     xlab = expression(paste(hat(sigma))))
 abline(v = mean(samples1[,"sigma"]), col = "red", lwd = 3)
 dev.off()
 
 pdf("figs/norm1_pp.pdf", width = 8, height = 6)
 hist(pp1, breaks = 50,
-     main = "Posterior Predictive Distribution",
-     xlab = "Posterior Predictions of x")
+     main = expression(paste("Posterior Predictive Distribution")),
+     xlab = expression(paste(hat(x))))
 abline(v = mean(pp1), col = "red", lwd = 3)
 dev.off()
 
@@ -83,16 +83,16 @@ plot_samples <- function(s, ...) {
 
 pdf("figs/norm1.pdf", width = 8, height = 6)
 plot_samples(samples1[,"(Intercept)"], breaks = 50,
-             main = expression(paste("Marginal posterior of ", bar(x)[1])),
-             xlab = expression(paste(bar(x)[1])))
+             main = expression(paste("Marginal Posterior Distribution of ", hat(mu)[1])),
+             xlab = expression(paste(hat(mu)[1])))
 dev.off()
 pdf("figs/norm2.pdf", width = 8, height = 6)
 plot_samples(samples1[,"(Intercept)"] - samples2[,"(Intercept)"], breaks = 50,
-             main = expression(paste("Marginal posterior of ", bar(x)[1] , "-", bar(x)[2])),
-             xlab =  expression(paste(bar(x)[1] , "-", bar(x)[2])))
+             main = expression(paste("Marginal Posterior Distribution of ",hat(mu)[1] , " - ", hat(mu)[2])),
+             xlab =  expression(paste(hat(mu)[1] , " - ", hat(mu)[2])))
 dev.off()
 pdf("figs/norm3.pdf", width = 8, height = 6)
 plot_samples(samples1[,"(Intercept)"] - samples3[,"(Intercept)"], breaks = 50,
-             main = expression(paste("Marginal posterior of ", bar(x)[1] , "-", bar(x)[3])),
-             xlab = expression(paste(bar(x)[1] , "-", bar(x)[3])))
+             main = expression(paste("Marginal Posterior Distribution of ", hat(mu)[1] , " - ", hat(mu)[3])),
+             xlab = expression(paste(hat(mu)[1] , " - ", hat(mu)[3])))
 dev.off()
