@@ -39,12 +39,21 @@ md3 <- list(N = length(x3),
 fit1 <- stan_glm(x ~ 1, data = x1, prior_intercept = normal(0,3, autoscale = FALSE), prior_aux = normal(0,3, autoscale = FALSE))
 fit2 <- stan_glm(x ~ 1, data = x2, prior_intercept = normal(0,3, autoscale = FALSE), prior_aux = normal(0,3, autoscale = FALSE))
 fit3 <- stan_glm(x ~ 1, data = x3, prior_intercept = normal(0,3, autoscale = FALSE), prior_aux = normal(0,3, autoscale = FALSE))
+fit4 <- stan_glm(x ~ 1, data = x1, prior_intercept = normal(0,0.1, autoscale = FALSE), prior_aux = normal(0,0.1, autoscale = FALSE))
 
 samples1 <- as.matrix(fit1$stanfit)
 samples2 <- as.matrix(fit2$stanfit)
 samples3 <- as.matrix(fit3$stanfit)
+samples4 <- as.matrix(fit4$stanfit)
 
 pp1 <- posterior_predict(fit1)
+pp4 <- posterior_predict(fit4)
+
+pp1_diff <- apply(pp1, 1, function(x){x - x1$x})
+pp1_diff <- t(pp1_diff)
+
+pp4_diff <- apply(pp4, 1, function(x){x - x1$x})
+pp4_diff <- t(pp4_diff)
 
 # Post-process ------------------------------------------------------------
 
@@ -95,4 +104,14 @@ pdf("figs/norm3.pdf", width = 8, height = 6)
 plot_samples(samples1[,"(Intercept)"] - samples3[,"(Intercept)"], breaks = 50,
              main = expression(paste("Marginal Posterior Distribution of ", hat(mu)[1] , " - ", hat(mu)[3])),
              xlab = expression(paste(hat(mu)[1] , " - ", hat(mu)[3])))
+dev.off()
+pdf("figs/norm1_pp_diff.pdf", width = 8, height = 6)
+plot_samples(pp1_diff, breaks = 50,
+             main = expression(paste("Distribution of ", hat(x) , " - ", x, " (Weak Priors)")),
+             xlab = expression(paste(hat(x) , " - ", x)))
+dev.off()
+pdf("figs/norm1_pp_diff_bad.pdf", width = 8, height = 6)
+plot_samples(pp4_diff, breaks = 50,
+             main = expression(paste("Distribution of ", hat(x) , " - ", x, " (Strong Priors)")),
+             xlab = expression(paste(hat(x) , " - ", x)))
 dev.off()
