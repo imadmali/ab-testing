@@ -32,6 +32,6 @@ plot_samples <- function(s, ...) {
 
 pdf("figs/bin1.pdf", width = 8, height = 6)
 plot_samples(samples1[,"theta"], breaks = 50,
-             main = "Posterior of theta",
-             xlab = "mu1", xlim = c(0,1))
+             main = expression(paste("Posterior Distribution of ", p)),
+             xlab = expression(paste(p)), xlim = c(0,1))
 dev.off()
