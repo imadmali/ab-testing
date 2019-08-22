@@ -2,7 +2,7 @@ data {
   int<lower=0> N;
   int y[N];
   int trials[N];
-  real shape1;
+  real<lower=0> shape1;
   real<lower=0> shape2;
 }
 parameters {
