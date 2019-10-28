@@ -5,7 +5,7 @@ date: "7/31/2019"
 output: 
   html_document:
     toc: true
-    theme: cosmo
+    theme: sandstone
 ---
 
 ```{r setup, include=FALSE}
@@ -21,35 +21,44 @@ rstan_options(auto_write = TRUE)
 
 ## Introduction
 
-One could argue that A/B testing is just marketing jargon for a randomized controlled trial. The test is conducted in order to determine if a change in service will have a positive impact on the business before rolling out that change to all the customers. Typically, A/B testing involves one group of people being served the existing content (control group) while another group may be served different content (treatment group) and, through a measurable indicator, you want to determine if there is a difference in reaction between the two groups. If the treatment resulted in a positive change in the indicator then you might be able to make the case to serve the different content to a wider audience. Conversely, if the treatment resulted in a negative change then you may be hesitant to serve it to a wider audience. In that situation perhaps the content needs to be redesigned (and retested) before going to market.
+A/B testing is just marketing jargon for a randomized controlled trial. The test is conducted on a subset of users in order to determine if a change in service or experience will have a positive impact on the business before rolling out that change to all the users.
 
-A/B testing approaches used in practice typcially rely on Frequentist hypothesis testing methods. Not only are the results of these methods difficult to interpret, but they can also be misleading as terms such as "p-values" and "confidence intervals" are often misinterpreted as probabilities directly related to the parameter of interest. Disconcertingly, p-values are often used as cutoffs for a business decision. In other words, reaching a statistically signficant result is often sufficient to convince a business to move forward with a particular decision. But these descisions should not be reductively derived from arbitrary cutoffs (e.g. a p-value of less than 0.05). They should be determined by domain-specific experts who understand the industry, while statisticians should provide interpretable results that can help these experts make more informed decisions.
+Typically, A/B testing involves one group of people being served the existing content (control group) while another group may be served different content (treatment group) and, through a measurable indicator, you want to determine if there is a difference in reaction between the two groups. If the treatment resulted in a positive change in the indicator then you might be able to make the case to serve the different content to a wider audience. Conversely, if the treatment resulted in a negative change then you may be hesitant to serve it to a wider audience. In that situation perhaps the change in service/experience needs to be redesigned (and retested).
 
-This case study outlines how to provide these interpretable results. We use simple examples to show how to perform Bayesian A/B testing with continuous and count data. This involves modeling the data rather than defining/computing a test statistic from the data. Additionally, a Bayesian approach allows applied statisticians to describe differences in groups probabilistically rather than using traditional hypothesis testing methods. This helps to clearly communicate the risk associated with business decisions. The examples used here are analogous to the t-test and the Fisher's exact test, but the methodology discussed can be applied to data that follow other distributions. The first section considers continuous data (assumed to be generated from the normal distribution() and the second section considerd count data (assumed to be generated from the binomial distribution). (If you need a referesher on how convoluted hypothesis testing is, Appendix A goes over the interpretation of p-values using a two-sample t-test example.)
+A/B testing approaches used in practice typcially rely on Frequentist hypothesis testing methods. Not only are the results of these methods difficult to interpret, but they can also be misleading. Terms such as "p-values" and "confidence intervals" are often misinterpreted as probabilities directly related to the parameter of interest. Disconcertingly, p-values are often used as cutoffs for a business decision. In other words, reaching a statistically signficant result is often sufficient to convince a business to move forward with a particular decision. We argue that these descisions should not be reductively derived from arbitrary cutoffs (e.g. a p-value of less than 0.05). Instead they should be determined by domain-specific experts who understand the industry, while statisticians should provide interpretable results that can help these experts make more informed decisions. This case study provides a way for domain-specific experts to apply their knowledge to the statistical inference process by communicating through probability. (Specifically they're communicating the risk they're willing to take.)
 
-At a high-level, we stress that Frequentist methods focus on the distribution of the test statsitic as opposed to the parameter of interest. Conclusions are made about the data through understanding how the observed test statistic relates to the distribution of the test statistic under the null hypothesis. Alternatively, the Bayesian methods proposed here allow the researcher to perform inference directly on the parameter of interest, which is more useful in the context of A/B testing.
+Some key benefits to the Bayesian approach include,
+
+* Allowing domain-specific experts to apply their knowledge to statistical inference.
+* Modeling the data rather than defining/computing a test statistic from the data. This allows us to perform inference on the (predicted) data instead of the parameters.
+* Ability to describe differences in groups probabilistically rather than using traditional hypothesis testing methods.
+* Quantifying null hypotheses in priors.
+
+We use simple examples to show how to perform Bayesian A/B testing with continuous and count data. The examples used here are analogous to the t-test and the Fisher's exact test, but the methodology discussed can be applied to data that follow other distributions. The first section considers continuous data (assumed to be generated from the normal distribution) and the second section considerd count data (assumed to be generated from the binomial distribution). (If you need a referesher on how convoluted hypothesis testing is, Appendix A goes over the interpretation of p-values using a two-sample t-test example.)
+
+At a high-level, we stress that Frequentist methods focus on the distribution of the test statsitic as opposed to the quantity of interest (i.e. predictions or parameters). Inference is done by understanding how the observed test statistic relates to the distribution of the test statistic under the null hypothesis. Alternatively, the Bayesian methods proposed here allow the researcher to perform inference directly on the quantity of interest, which is more useful in the context of A/B testing.
 
 ## Continuous Data
 
 This example is analogous to the two sample t-test (specifically Welch's t-test) where the researcher is interested in testing if there is a noticeable difference between the means of two different samples.
 
-Suppose an online streaming company is interested in testing whether ads affect the consumption of their service. The hypothesis is that reducing ads will increase streaming consumption. Since this decision can be costly if a majority of revenue is derived from ads, it would be useful to conduct a test to evaluate the impact of ad reduction. One way to test this is to draw two random samples from the customer base, serve them with different content, and see if there is a substantial difference in streaming consumption (hours per day). Suppose we treat the two groups in the following way,
+Suppose an online streaming company is interested in testing whether ads affect the consumption of their service. The hypothesis is that reducing ads will increase streaming consumption. Since this decision can be costly if a significant amount of revenue is derived from ads, it would be useful to conduct a test to evaluate the impact of ad reduction. One way to test this is to draw two random samples from the user base, serve them with different content, and see if there is a substantial difference in streaming consumption (hours per day). Suppose we treat the two groups in the following way,
 
 * Group A (control): streaming service contains moderate ads.
-* Group B (treatment): streaming service contained no ads.
+* Group B (treatment): streaming service contains no ads.
 
 The data collected might look something like the following below. Each observation is a user's daily streaming consumption in hours.
 
 ```{r}
-# rnorm(12,3,1)  # deleteme
+# rnorm(12,3,1)
 group_a <- c(3.432119, 3.727513, 2.288977, 2.284448, 2.573595, 3.078873,
              3.307105, 2.445558, 2.557591, 2.950913, 3.083117, 2.922103)
-# rnorm(10,6,1)  # deleteme
-group_b <- c(5.005834, 4.405820, 6.889187, 5.206845, 6.475547,
-             7.600867, 5.131494, 4.785850, 5.415788, 4.927524)
+# rnorm(10,6,1)
+group_b <- c(6.210725, 5.31649, 5.298087, 5.539633, 4.561971,
+             5.001099, 3.382349, 5.2544, 4.484435, 3.837214)
 ```
 
-Within the context of Bayesian statistics, in order to determine if there is a difference between the groups we first need to model the data. It is reasonable to assume that the data was generated from the normal distribution. In this situation we only have a single variable in each group (the outcome variable). As a result we want our model to use the normal distribution as the likelihood of the data and estimate a location and a scale parameter. Additionally, we can apply prior distributions over each of these parameters.
+In order to determine if there is a difference between the groups we first need to model the data. It is reasonable to assume that the data are generated from the normal distribution. In this situation we only have a single variable in each group (the outcome variable). As a result we want the likelihood distribution of the model to be the normal distribution. Since we have not predictors, the model will estimate a location and a scale parameter for each group. Additionally, we can apply prior distributions over each of these parameters.
 
 $$
 \begin{align*}
@@ -60,17 +69,19 @@ y_{B} \sim &\mathcal{N}(\mu_{B}, \sigma_{B}) \\
 \end{align*}
 $$
 
-Now that we have established our model, we need to fit the model to the data so that we can estimate the parameters. Since we only care about the means of the two groups, we can accomplish this in **rstanarm** by fitting a Bayesian linear regression model (using the `stan_glm()` function) to each group with only the intercept as a predictor. With this model construction, the intercept is interpreted the location parameters $\mu_{A}$ and $\mu_{B}$. With regard to priors, we have applied $\mathcal{N}(0,1)$ distributions on both intercepts.
+Now that we have established our model, we need to fit the model to the data so that we can estimate the parameters. We can do this by using **rstanarm** to fit a Bayesian linear regression model (using the `stan_glm()` function) to each group with only the intercept as a predictor. With this model construction, the intercept is interpreted the location parameters $\mu_{A}$ and $\mu_{B}$.
+
+With regard to priors, we have applied $\mathcal{N}(3,1)$ distributions on both intercepts. The reasoning behind this is that the empirical mean of the control group is approximately $3$. By applying this prior to the treatment group we are quantifying our belief that the treatment group is not substantially different to the control group. (Which is a reasonable belief to have since the whole purpose of the experiment is to determine whether the two group are different.) This allows us to be more conservative when we do our inference. If we end up concluding that the two groups are different, we can say that the difference overcame our belief that the two groups are identical.   
 
 ```{r results='hide'}
 fit_group_a <- stan_glm(y ~ 1,
                         data = data.frame(y=group_a),
                         family = gaussian(link="identity"),
-                        prior_intercept = normal(0, 1, autoscale = FALSE), seed = 123)
+                        prior_intercept = normal(3, 1, autoscale = FALSE), seed = 123)
 fit_group_b <- stan_glm(y ~ 1,
                         data = data.frame(y=group_b),
                         family = gaussian(link="identity"),
-                        prior_intercept = normal(0, 1, autoscale = FALSE), seed = 123)
+                        prior_intercept = normal(3, 1, autoscale = FALSE), seed = 123)
 ```
 
 Recall that Stan uses a sampling algorithm to estimate the marginal posterior distribution of the parameters which means that we have samples instead of point estimates for the intercept values. For Group A the mean of the intercept samples is,  
@@ -87,65 +98,105 @@ coef(fit_group_b)
 
 With these estimates it looks like Group A had an average consumption of about 3 hours while Group B had an average consumption of about 6 hours. This gives us a difference in consumption of approximately 3 hours. Unfortunately, this assessement does not say anything about how uncertain this difference is.
 
-We can quantify the uncertainty of how different the two estimates are by computing sample quantiles on the posterior distribution of the location parameters. This is known as a credible interval. It is also refered to as the highest density interval (Kruschke 2015). If we compute the $90\%$ credible interval and the intervals do not overlap then we can be $90\%$ sure that the two groups are different. If they do overlap, then we cannot establish that level of certainty about the difference between the two groups.
+We can quantify the uncertainty of how different the two estimates are by computing sample quantiles on the posterior predictive distribution. This is known as a credible interval. It is also refered to as the highest density interval (Kruschke 2015). If we compute the $90\%$ credible interval then we can say that $90\%$ of the posterior predictions for that group lies between that interval. In order for us to determine how different these groups are we can compute how much of the credible interval between the two groups overlaps as a proportion. Suppose there is a $10\%$ overlap between the $90\%$ credible intervals in each of the two groups. This allows us to say, given that we are $90\%$ certain about where the data lies, there's a $10\%$ chance that the two groups are similar.
 
-Below we compute the $90\%$ credible interval for both groups. However, note that the quantile choice is arbitrary, and may vary depending on the applied context and the appetite for uncertainty. After computing the $90\%$ credible interval for both groups it is clear that the intervals do not overlap. Thus, we are $90\%$ sure that the two groups are different based off of our model.
+The functions below enable us to compute the proportion of overlap between the two groups.
+
+```{r}
+#' Quantify Overlapping Proportion
+#' @param large Posterior predictive samples that have larger range than \code{small}.
+#' @param small Posterior predictive samples that have smaller range than \code{large}.
+#' @param p Probability to compute credible interval.
+#' @return A proportion between 0 and 1 indicating how much of \code{small} is contained in \code{large} given the credible interval specification.
+overlap_prop <- function(large, small, p = 1) {
+  p_lwr <- (1-p)/2
+  p_upr <- 1 - p_lwr
+  large_ci <- quantile(large, probs = c(p_lwr, p_upr))
+  left <- min(large_ci)
+  right <- max(large_ci)
+  indxs <- which(small >= left & small <= right)
+  return(length(indxs)/length(small))
+}
+
+#' Quantify Overlapping Posterior Predictive Distributions
+#' @param a Group A posterior predictive samples.
+#' @param b Group B posterior predictive samples.
+#' @param p Probability to compute credible interval.
+#' @return A proportion between 0 and 1 indicating how much of the credible intervals for \code{a} and \code{b} overlap with one another.
+overlap <- function(a, b, p = 1) {
+  length_a <- dist(range(a))
+  length_b <- dist(range(b))
+  if (length_a >= length_b) {
+    out <- overlap_prop(a, b, p)
+  }
+  else if (length_a < length_b) {
+    out <- overlap_prop(b, a, p)
+  }
+  return(out)
+}
+```
+
+Below we compute the $0.9$ credible interval for both groups. Note that the quantile choice is arbitrary, and may vary depending on the applied context and the appetite for uncertainty. This is where we recommend getting input from domain-specific experts. In this case we are willing to accept a $10\%$ chance of being wrong about where the predictions lie. The closer your credible interval is to $1$ the more risk averse you are with regards to inference.
 
 ```{r fig.align='center', fig.height=5, fig.width=10}
-par_group_a <- as.matrix(fit_group_a)
-par_group_b <- as.matrix(fit_group_b)
-par_group_a_quant <- quantile(par_group_a[,"(Intercept)"], probs = c(0.05,0.95))
-par_group_a_quant
-par_group_b_quant <- quantile(par_group_b[,"(Intercept)"], probs = c(0.05,0.95))
-par_group_b_quant
+pp_a <- posterior_predict(fit_group_a)
+pp_b <- posterior_predict(fit_group_b)
+pp_a_quant <- quantile(pp_a, probs = c(0.05,0.95))
+pp_b_quant <- quantile(pp_b, probs = c(0.05,0.95))
+
+overlap(pp_a, pp_b, p = 0.9)
 
 par(mfrow=c(1,2))
 # group A
-hist(par_group_a[,"(Intercept)"], breaks = 50, col = '#808080', border = '#FFFFFF',
+hist(pp_a, breaks = 50, col = '#808080', border = '#FFFFFF',
      main = "Group A",
-     xlab = "Avg Streaming (hrs)")
-abline(v = par_group_a_quant[1], lwd = 2, col = "red")
-abline(v = par_group_a_quant[2], lwd = 2, col = "red")
+     xlab = "Avg Streaming (hrs)",
+     xlim = c(0,10))
+abline(v = pp_a_quant[1], lwd = 2, col = "red")
+abline(v = pp_a_quant[2], lwd = 2, col = "red")
 # group B
-hist(par_group_b[,"(Intercept)"], breaks = 50, col = '#808080', border = '#FFFFFF',
+hist(pp_b, breaks = 50, col = '#808080', border = '#FFFFFF',
      main = "Group B",
-     xlab = "Avg Streaming (hrs)")
-abline(v = par_group_b_quant[1], lwd = 2, col = "red")
-abline(v = par_group_b_quant[2], lwd = 2, col = "red")
+     xlab = "Avg Streaming (hrs)",
+     xlim = c(0,10))
+abline(v = pp_b_quant[1], lwd = 2, col = "red")
+abline(v = pp_b_quant[2], lwd = 2, col = "red")
 ```
 
-For a more concise approach we can compute the credible interval on the difference between the two posterior distributions. As with the above, this enables us to compute the probability of how different the two sample mean estimates are. Again, we will compute the $90\%$ credible interval. If this interval does not contain zero then we can say that we are $90\%$ sure that the two groups are different. Below we visualize this result by plotting a histogram of the difference between the two samples along with the credible intervals.
+After computing the $90\%$ credible interval for both groups we find an overlap proportion of approximately $0.2$. Thus, given that we are $90\%$ sure about our posterior predictions for the two groups, we are about $80\%$ confident that the two groups are different. Going back to the business problem, we can conclude that we are $80\%$ confident that reducing ads increases daily streaming consumption given our acceptable risk of being $10\%$ wrong about daily streaming consumption (via the $90\%$ credible interval).
 
-```{r fig.align='center'}
-par_diff <- par_group_a[,"(Intercept)"]-par_group_b[,"(Intercept)"]
-par_diff_quant <- quantile(par_diff, probs = c(0.05,0.95))
-par_diff_quant
+In the plot below we show how the conclusion with regard to the overlap proportion will vary as risk varies. Notice that the more risk we take when defining our credible interval (i.e. the closer the credible interval is to 0) the lower the overlap proportion.
 
-hist(par_diff, breaks = 50, col = '#808080', border = '#FFFFFF',
-     main = "Difference in Avg Streaming Consumption",
-     xlab = "Group A - Group B")
-abline(v = par_diff_quant[1], lwd = 2, col = "red")
-abline(v = par_diff_quant[2], lwd = 2, col = "red")
+```{r fig.align='center', fig.height=5, fig.width=5}
+# credible interval probabilities
+ci_p <- rev(seq(0.1,1, by = 0.05))
+# compute proportions
+overlap_ab <- sapply(ci_p, function(s){overlap(pp_a, pp_b, s)})
+# plot
+plot(ci_p, overlap_ab, type = "o", pch = 20,
+     xaxt = "n", yaxt = "n",
+     main = "Group A vs Group B", xlab = "Credible Interval Probability", ylab = "Overlap Proportion")
+axis(1, seq(0,1,by=0.1), cex.axis = 0.8)
+axis(2, seq(0,1,by=0.1), cex.axis = 0.8)
+abline(v = 0.5, lty = 2)
 ```
-
-The $90\%$ credible interval that we computed is about $[-3,-2]$ which clearly omits zero. With regard to the business context, we can say that, based on our model, we are $90\%$ sure that eliminating ads from the streaming service will increase consumption. More importantly, we can go back to decision makers with a probabilistic description of how streaming consumption differs between the two groups.
 
 ## Count Data
 
 This example is analogous to Fisher's exact test where the researcher is interested in testing differences in proportions (particularly in the form of a contingency table).
 
-Suppose that the business wants to know whether a product sells better if there is a change to the online user interface (UI) that consumers interact with to buy the product. They run an experiment on two groups and obtain the following results,
+Now, suppose that the business wants to know whether a product sells better if there is a change to the online user interface (UI) that consumers interact with to buy the product. They run an experiment on two groups and obtain the following results,
 
 * Group C (control): 10 customers out of a sample of 19 purchased the product with the default UI.
 * Group D (treatment): 14 customers out of a sample of 22 purchased the product with the alternative UI.
 
-It is resonable to assume that the data is binomially distributed. In that case we can define the model for the the two groups as follows,
+It is resonable to assume that the data is binomially distributed, in which case we can define the model for the the two groups as follows,
 
 $$
 \begin{align*}
-y_{C} \sim &\mathcal{Bin}(\theta_{C},N_{C}) \\
+y_{C} \sim &\mbox{Bin}(\theta_{C},N_{C}) \\
 &\mbox{priors on } \theta_{C} \\
-y_{D} \sim &\mathcal{Bin}(\theta_{D},N_{D}) \\
+y_{D} \sim &\mbox{Bin}(\theta_{D},N_{D}) \\
 &\mbox{priors on } \theta_{D} \\
 \end{align*}
 $$
@@ -174,7 +225,7 @@ generated quantities {
 }
 ```
 
-Now we fit this model to the data. In this case we chose the (hyper) parameters in the beta distribution in such a way that the distribution mimics the uniform distribution over support $[0,1]$.
+Now we fit this model to the data. In this case we chose the hyperparameters in the beta distribution in such a way that the prior distribution mimics the uniform distribution over support $[0,1]$.
 
 ```{r results='hide', message=FALSE, warning=FALSE}
 group_c <- list(N = 1,
@@ -195,45 +246,86 @@ fit_group_d <- stan("../models/binom.stan", data = group_d,
                     seed = 123)
 ```
 
-Similar to the method described in the previous section we can compute and plot the $90\%$ credible intervals for the difference in posterior parameter samples.
+Similar to the method described in the previous section we can compute and plot the $90\%$ credible intervals for the difference in posterior predictions. We can also compute the overlap proportion of these two sets of predictions.
 
-```{r fig.align='center'}
-par_group_c <- as.matrix(fit_group_c)
-par_group_d <- as.matrix(fit_group_d)
-par_diff <- par_group_c[,"theta"] - par_group_d[,"theta"]
-par_diff_quant <- quantile(par_diff, probs = c(0.05,0.95))
-par_diff_quant
+```{r fig.align='center', fig.height=5, fig.width=10}
+samples_group_c <- as.matrix(fit_group_c)
+samples_group_d <- as.matrix(fit_group_d)
+pp_c <- samples_group_c[,"y_hat[1]"]
+pp_d <- samples_group_d[,"y_hat[1]"]
+pp_c_quant <- quantile(pp_c, probs = c(0.05,0.95))
+pp_d_quant <- quantile(pp_d, probs = c(0.05,0.95))
+
+# compute overlap
+overlap(pp_c, pp_d, p = 0.9)
+
 # plot
-hist(par_diff, breaks = 50, col = '#808080', border = '#FFFFFF',
-     main = "Difference in Product Consumption in Response to UI Change",
-     xlab = "Group C - Group D")
-abline(v = par_diff_quant[1], lwd = 2, col = "red")
-abline(v = par_diff_quant[2], lwd = 2, col = "red")
+# group C
+par(mfrow=c(1,2))
+hist(pp_c, breaks = 50, col = '#808080', border = '#FFFFFF',
+     main = "Group C",
+     xlab = "Product Consumption",
+     xlim = c(0,25))
+abline(v = pp_c_quant[1], lwd = 2, col = "red")
+abline(v = pp_c_quant[2], lwd = 2, col = "red")
+# group D
+hist(pp_d, breaks = 50, col = '#808080', border = '#FFFFFF',
+     main = "Group D",
+     xlab = "Product Consumption",
+     xlim = c(0,25))
+abline(v = pp_d_quant[1], lwd = 2, col = "red")
+abline(v = pp_d_quant[2], lwd = 2, col = "red")
 ```
 
-It looks like the credible interval straddles zero so we cannot be $90\%$ that there is a substantial change in consumption behavior between the two groups when the UI changes.
+Looking at the histograms it's clear that there's quite a bit of overlap between the two groups. The overlap proportion is about 0.7. So under our $90\%$ credible interval, there is a $70\%$ chance that there is no difference in behavior when the UI changes.
 
-Note, this example involved a really small data set (only one observation for each group). But the same model can easily be extended to many observations within each group. 
+Below we show how the overlap proportion varies based on the amount of risk we're willing to take when we define out credible intervals.
+
+```{r fig.align='center', fig.height=5, fig.width=5}
+# credible interval probabilities
+ci_p <- rev(seq(0.1,1, by = 0.05))
+# compute proportions
+overlap_cd <- sapply(ci_p, function(s){overlap(pp_c, pp_d, s)})
+# plot
+plot(ci_p, overlap_cd, type = "o", pch = 20,
+     xaxt = "n", yaxt = "n",
+     main = "Group C vs Group D", xlab = "Credible Interval Probability", ylab = "Overlap Proportion")
+axis(1, seq(0,1,by=0.1), cex.axis = 0.8)
+axis(2, seq(0,1,by=0.1), cex.axis = 0.8)
+abline(v = 0.5, lty = 2)
+```
+
+Note, this example involved a really small data set (only one observation for each group). But the same model can easily be extended to many observations within each group. Also, just as we described in the continous example, we can model the outcome. 
 
 ## Benefits of Bayesian Methods
 
 **Interpretation of probability**
 
-The main advantage of the approach described in this case study is the ability to explain the parameter estimates in terms of probability. As a result, we can explain the differences in parameters in terms of probability as well. Quantifying our uncertainty in this way enables us to make statments like 'based on the data collected and the model specified, we are 80% certain that the two groups are different', which is much more interpretable and impactful than statements like 'with a p-value of less than 0.2 we can reject the null hypothesis that the two groups are identical'. While this is not exclusively a Bayesian benefit (i.e. we could have completely excluded priors from our models, estimating the parameters solely from the likelihood of the data), we took advantage of the fact that appropriately implemented Bayesian computational methods rely on sampling the parameter space. These samples can then be transformed and used to make probabilistic statements about the marginal posterior distribution of the parameters, and consequentially about the hypothesis being tested.  
+The main advantage of the approach described in this case study is,
+
+1. the ability to communicate our results in estimates in terms of probability
+2. the ability to quantify business risk using probability when doing inference.
+
+Quantifying our uncertainty in this way enables us to make statments like 'based on the data collected, the model specified, and the risk we're willing to take we are 80% certain that the two groups are different', which is much more interpretable than statements like 'with a p-value of less than 0.2 we can reject the null hypothesis that the two groups are identical'. While this is not exclusively a Bayesian benefit (i.e. we could have completely excluded priors from our models, estimating the parameters solely from the likelihood of the data), we took advantage of the fact that appropriately implemented Bayesian computational methods rely on robust sampling methods. These samples can then be transformed and used to make probabilistic statements about posterior predicitive distribution, and consequentially about the hypothesis being tested.  
 
 **Incorporating prior beliefs**
 
-The ability to define a prior distribution over your parameters is a key benefit of Bayesian methods over Frequentist approaches. Prior beleifs in your model are reflected with two choices: the type of the distribution and how the distribution is parametrized.
+The ability to define a prior distribution over your parameters is a key benefit of Bayesian methods. Prior beliefs in your model can be incorporated with two choices: the type of the distribution and how the distribution is parametrized.
 
 The type of distribution relates to which distribution you choose to define on the parameters. In the continuous data example we chose the normal distribution. But since the underlying data (hours streamed per day) cannot be negative it might be more reasonable to define a truncated normal distribution as the prior (which is straightforward to implement in rstan). This gives us the opportunity to model the data generation process more appropriately.
 
-How the prior distribution is parameterized reflects your belief on the value that the parameter takes. For the treatment group in the count data example we could have chosen the shape parameters in the beta ditribution prior in such a way that most of the mass was centered around the observed control group proportion, $10/19 \approx 0.53$ (e.g. $\mbox{Beta}(2,2)$). This would encode a prior belief that assumes the treatment group behaves in a similar way to the control group. With this prior, if we concluded that the two groups were in fact different then we could really be sure that the different content changed the treatment group's behavior since their observed behavior overcame our prior beliefs. Applying this type of prior would mitigate making any false-positive conclusions from this type of analysis. 
-
-Prior beliefs are also reflected in the choice of likelihood distribution. It was our beliefs about the observed data and problem context that lead us to use the normal distribution to model the data in the continuous data example. We could have use the Student t distribution instead to account for small sample concerns. 
+How the prior distribution is parameterized reflects your belief on the value that the parameter takes. In the continuous data example we showed how we parametrized the prior distribution for the treatement group to capture our prior belief that the two groups are similar. A similar approach can be taken for treatment group in the count data example. With these types of priors, if we concluded that the two groups were in fact different then we could really be sure that the treatment changed the treatment group's behavior, since their observed behavior overcame that prior belief. Applying this type of prior would help mitigate false-positive conclusions from this type of analysis. 
 
 ## Conclusion
 
-The Bayesian methods outlined here focused on modeling the data generation process and performing inference on the posterior distributions of the associated parameters. We did not need to worry about computing test statistics and determining the distribution of these statistics under the null hypothesis. Nor did we need to calculate p-values to figure out whether the groups involved in A/B testing are different. Instead we performed inference directly on the parameters of interest. By constructing credible intervals on these parameters we are able to probabilistically convey how sure we are about the parameter values given our prior beliefs. This enables researchers to communicate uncertainty effectively to decision makers, with the intention that they can now make more informed decisions.
+Below is a summary of the inference process we've gone through to compare groups involved in A/B testing.
+
+1. Model the indicator that is being measured to track the difference between the two groups.
+2. Compute the credible interval $c$ over the posterior predictions of the two groups. $1-c$ quantifies how much risk the business is willing to take in regards to the predicted indicator.
+3. Compute the proportion $p$ of how much each interval overlaps with one another. $p$ defines how similar the two groups are.
+4. We can conclude that, given there is a $(1-c)100$ percent chance that we are wrong about the predictions, there is a $(1-p)100$ percent chance that the two groups are different.
+
+The Bayesian methods outlined in this case study focused on modeling the data generation process and performing inference on the posterior predictive distribution of two groups. We did not need to worry about computing test statistics and determining the distribution of these statistics under the null hypothesis. Nor did we need to calculate p-values to figure out whether the groups involved in A/B testing are different. Instead we performed inference directly on the posterior predictions. By constructing credible intervals and computing overlap on these predictions we are able to probabilistically convey how sure we are about the difference between the two groups. This enables statisticians to quantify business risk and allows them to communicate uncertainty unambiguously to decision makers, allowing more informed decisions can now be made.
 
 ## References
 

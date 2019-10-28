@@ -27,11 +27,16 @@ pp_a <- posterior_predict(fit_group_a)
 pp_b <- posterior_predict(fit_group_b)
 pp_c <- posterior_predict(fit_group_c)
 
-hist(pp_a, breaks = 50)
-hist(pp_b, breaks = 50)
-hist(pp_c, breaks = 50)
+par(mfrow = c(1,3))
+hist(pp_a, main = "Group A", xlab = "Posterior Prediction",
+     breaks = 50, border = "#ffffff", col = "#808080")
+hist(pp_b, main = "Group B", xlab = "Posterior Prediction",
+     breaks = 50, border = "#ffffff", col = "#808080")
+hist(pp_c, main = "Group C", xlab = "Posterior Prediction",
+     breaks = 50, border = "#ffffff", col = "#808080")
+dev.off()
 
-#' Quantify Overlapping Distributions
+#' Quantify Overlapping Proportion
 #' @param large Posterior predictive samples that have larger range than \code{small}.
 #' @param small Posterior predictive samples that have smaller range than \code{large}.
 #' @param p Probability to compute credible interval.
@@ -46,6 +51,11 @@ overlap_prop <- function(large, small, p = 1) {
   return(length(indxs)/length(small))
 }
 
+#' Quantify Overlapping Posterior Predictive Distributions
+#' @param a Group A posterior predictive samples.
+#' @param b Group B posterior predictive samples.
+#' @param p Probability to compute credible interval.
+#' @return A proportion between 0 and 1 indicating how much of the credible intervals for \code{a} and \code{b} overlap with one another.
 overlap <- function(a, b, p = 1) {
   length_a <- dist(range(a))
   length_b <- dist(range(b))
@@ -58,24 +68,25 @@ overlap <- function(a, b, p = 1) {
   return(out)
 }
 
-
+overlap(pp_a, pp_b, p = 1)
 overlap(pp_a, pp_b, p = 0.8)
 overlap(pp_a, pp_c, p = 0)
 
+# credible interval probabilities
 ci_p <- rev(seq(0.1,1, by = 0.05))
 
 overlap_ab <- sapply(ci_p, function(s){overlap(pp_a, pp_b, s)})
 overlap_ac <- sapply(ci_p, function(s){overlap(pp_a, pp_c, s)})
 
 # Interpretation: The business wants to be 100*p percent sure about the range of the predicted metric (credible interval). Given this interval there is a an overlap proportion that quantifies how different the two groups are.
-plot(ci_p, overlap_ab, type = "o",
+plot(ci_p, overlap_ab, type = "o", pch = 20,
      xaxt = "n", yaxt = "n",
      main = "Group A vs Group B", xlab = "Credible Interval Probability", ylab = "Overlap Proportion")
 axis(1, seq(0.1,1,by=0.1))
 axis(2, seq(0,1,by=0.1))
 abline(v = 0.5, lty = 2)
 
-plot(ci_p, overlap_ac, type = "o",
+plot(ci_p, overlap_ac, type = "o", pch = 20,
      xaxt = "n", yaxt = "n",
      main = "Group A vs Group C", xlab = "Credible Interval Probability", ylab = "Overlap Proportion")
 axis(2, seq(0,1,by=0.1))
