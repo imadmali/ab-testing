@@ -115,6 +115,8 @@ fit_group_b <- stan_glm(y ~ 1,
                         refresh = 0)
 ```
 
+<!-- Why not combine the data and fit the model `y ~ group` (where group has 2 levels). Then you just need one model and can make posterior predictions for the two groups from the same fitted model object? I think this would make a lot of the stuff you do later easier too. Am I missing an obvious reason not to do this?-->
+
 Recall that Stan uses a sampling algorithm to estimate the joint posterior distribution of the parameters which means that we have samples instead of point estimates for the intercept values. For Group A the mean of the intercept samples is,  
 
 ```{r}
@@ -130,8 +132,14 @@ coef(fit_group_b)
 ```
 
 With these estimates it looks like Group A had an average consumption of about 3 hours while Group B had an average consumption of about 5 hours. This gives us a difference in consumption of approximately 2 hours. Unfortunately, this assessement does not say anything about how uncertain this difference is. We would like to be able to say something like "we are $p\%$ sure that the two groups are different".
+<!-- I don't think the point is whether they are different (of course they are!), but rather are they _enough_ different to merit switching, right? -->
 
-We can quantify the uncertainty of how different the two estimates are by computing sample quantiles on the posterior predictive distribution. This is known as a credible interval. It is also refered to as the highest density interval (Kruschke 2015). If we compute the $90\%$ credible interval then we can say that $90\%$ of the posterior predictions for that group lie between that interval. In order for us to determine how different these groups are we can compute how much of the credible intervals in each of the two groups overlap as a proportion. For example, suppose there is a $10\%$ overlap between the $90\%$ credible intervals in each of the two groups. This allows us to say, given that we are $90\%$ certain about where the predictions lie, there's a $10\%$ chance that the two groups are similar.
+We can quantify the uncertainty of how different the two estimates are by computing sample quantiles on the posterior predictive distribution. This is known as a credible interval. 
+<!-- I would say something like 'This is often referred to as a credible interval, although we prefer "predictive interval" when describing predictions (and "posterior interval" when describing parameters).' And then I wouldn't use credible interval anymore, although up to you.-->
+It is also refered to as the highest density interval (Kruschke 2015). 
+<!-- Actually I don't think they're exactly synonyms. I think the terms credible interval and posterior interval are more general. HDI refers to a particular way to define the interval that's different than using quantiles (central intervals). -->
+If we compute the $90\%$ credible interval then we can say that $90\%$ of the posterior predictions for that group lie between that interval. In order for us to determine how different these groups are we can compute how much of the credible intervals in each of the two groups overlap as a proportion. For example, suppose there is a $10\%$ overlap between the $90\%$ credible intervals in each of the two groups. This allows us to say, given that we are $90\%$ certain about where the predictions lie, there's a $10\%$ chance that the two groups are similar.
+<!-- I think it would be helpful to compare looking at differences in predictions to looking at differences in the _parameters_. Most people will think the natural thing to do is to compare the posterior distributions of the parameters (which isn't _horrible_), but I prefer the approach you're using of comparing predictions. I just think it's necessary to compare/distinguish between them. -->
 
 The functions below compute the proportion of overlap between the two groups.
 
@@ -198,7 +206,9 @@ abline(v = pp_b_quant[1], lwd = 2, col = "red")
 abline(v = pp_b_quant[2], lwd = 2, col = "red")
 ```
 
-After computing the $90\%$ credible interval for both groups we find an overlap proportion of approximately $0.2$. Thus, given that we are $90\%$ sure about our posterior predictions for the two groups, we are about $80\%$ sure that the two groups are in fact different. Going back to the business context, we can conclude that we are $80\%$ sure that reducing ads increases daily streaming consumption given our acceptable risk of being $10\%$ wrong about daily streaming consumption.
+<!-- hist(pp_a) is plotting a single histogram combining all 12 columns of the `pp_a` matrix. is that intentional? if you you my idea above about doing this in one mode for `y ~ group` then I think you just want to predict two new observations, one from A one from B and compare their predictive distributions. should be easier to do with bayesplot that way too!-->
+
+After computing the $90\%$ credible interval for both groups we find an overlap proportion of approximately $0.2$. Thus, given that we are $90\%$ sure about our posterior predictions for the two groups, we are about $80\%$ sure that the two groups are in fact different. Going back to the business context, we can conclude that we are $80\%$ sure that reducing ads increases daily streaming consumption given our acceptable risk of being $10\%$ wrong about daily streaming consumption. <!-- Given our modeling assumptions, etc. -->
 
 In the plot below we show how the overlap proportion will vary as the credible interval varies. To put it differently, it shows how the probabilistic difference between groups varies as risk varies. Notice that the more risk we take when defining our credible interval (i.e. the closer the credible interval is to 0) the lower the overlap proportion, and consequentially the more confident we are about the difference between the two groups.
 
@@ -215,6 +225,7 @@ axis(1, seq(0,1,by=0.1), cex.axis = 0.8)
 axis(2, seq(0,1,by=0.1), cex.axis = 0.8)
 abline(v = 0.5, lty = 2)
 ```
+<!-- Maybe ggplot2::qplot(x = ci_p, y = overlap_ab, geom = c("line", "point")) ?-->
 
 ## Count Data
 
@@ -237,6 +248,8 @@ y_{D} \sim &\mbox{Bin}(\theta_{D},N_{D}) \\
 $$
 
 We can fit a model to each group independently using the [**rstan**](https://mc-stan.org/rstan/) package. This requires us to specify the model in a Stan file and then compile/fit the model with the `stan()` function. The Stan file used to represent the above model is provided below. We decided to apply a beta distribution prior on the probability parameter of the binomial distribution. 
+
+<!-- It's a bit weird to switch from rstanarm to rstan suddenly without mentioning why! -->
 
 ```{stan eval=FALSE, output.var='binom'}
 data {
