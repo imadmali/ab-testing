@@ -5,7 +5,7 @@ date: "10/30/2019"
 output: 
   html_document:
     toc: true
-    theme: cosmo
+    theme: flatly
 ---
 
 ```{r setup, include=FALSE}
@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(collapse = TRUE)
 library(rstan)
 library(rstanarm)
+library(dplyr)
 rstan_options(auto_write = TRUE)
 ```
 
@@ -57,57 +58,65 @@ Suppose an online streaming company is interested in testing whether ads affect 
 * Group A (control): streaming service contains moderate ads.
 * Group B (treatment): streaming service contains no ads.
 
-The data collected might look something like the following below. Each observation is a user's daily streaming consumption in hours.
+The data collected might look something like the following below. Each observation is a user's daily streaming consumption in hours. We also have an additional variable `hc` which defines whether a user is predisposed to being a _high consumer_ of streaming content.
 
 ```{r}
-# rnorm(12,3,1)
-group_a <- c(3.432119, 3.727513, 2.288977, 2.284448, 2.573595, 3.078873,
-             3.307105, 2.445558, 2.557591, 2.950913, 3.083117, 2.922103)
-# rnorm(10,6,1)
-group_b <- c(6.210725, 5.31649, 5.298087, 5.539633, 4.561971,
-             5.001099, 3.382349, 5.2544, 4.484435, 3.837214)
+group <- c(rep(1,10), rep(2,12))
+group <- factor(c(rep("A",10), rep("B",12)))
+N <- length(group)
+hc <- sample(c(0,1), N, replace = TRUE)
+effect <- c(3,5)
+
+lp <- effect[group] + 1.5*hc
+y <- rnorm(N, lp, 0.5)
+
+experiment <- data.frame(y = y,
+                         group = factor(group),
+                         hc = hc)
+experiment
 ```
 
-In order to determine if there is a difference between the groups we first need to model the data for each group. In this situation we only have a single variable in each group (the outcome variable). It is reasonable to assume that the outcome is generated from the normal distribution. Given this, we want the likelihood distribution of the model to be the normal distribution. Since we have no predictors the model will estimate a location and a scale parameter for each group.
+In order to determine if there is a difference between the groups we need to define a model that predicts the outcome for each group. The data has been generated from the normal distribution so it is appropriate to specify a normal likelihood. Since we are _modeling_ the outcome we can include other variables, such as the binary predictor $x$. Traditional hypothesis testing methods focus solely on comparing the outcome of two groups. Here we model the outcome before comparing the groups. This allows us to include additional information in the model which will enable us to perform more granular inferences.
 
 We can apply prior distributions on each of these parameters. This is where the domain-specific expert can provide valuable input. For example, they may believe that (due to poor sampling) the sampled average of daily streaming hours is too low. In such a situation a prior can be applied to coerce the estimated average closer to the value they feel is more appropriate and representative of the population.
 
 $$
 \begin{align*}
-y_{A} \sim &\mathcal{N}(\mu_{A}, \sigma_{A}) \\
-&\mbox{priors on } \mu_{A}, \sigma_{A} \\
-y_{B} \sim &\mathcal{N}(\mu_{B}, \sigma_{B}) \\
-&\mbox{priors on } \mu_{B}, \sigma_{B} \\
+y \sim &\mathcal{N}(\mu_A + \mu_B + \beta \cdot \mbox{hc}, \sigma) \\
+& \mbox{priors on } \mu_A, \mu_B, \beta, \sigma \\
+\mu_A &\sim \mathcal{N}(3,1) \\
+\mu_B &\sim \mathcal{N}(3,1) \\
+\beta &\sim \mathcal{N}(0,1) \\
 \end{align*}
 $$
 
 Now that we have established our model, we need to fit the model to the data so that we can estimate the parameters. We can do this using the [**rstanarm**](https://mc-stan.org/rstanarm/) package which can fit a Bayesian linear regression model (using the `stan_glm()` function) to each group with only the intercept as a predictor. With this model construction, the intercept is interpreted as the location parameter.
 
-With regard to priors, we have applied $\mathcal{N}(3,1)$ distributions on both intercepts. The reasoning behind this is that the empirical mean of the control group is approximately $3$. By applying this prior to the treatment group we are quantifying our belief that the treatment group is not substantially different to the control group, which is our null hypothesis. (This is a reasonable belief to have since the whole purpose of the experiment is to evaluate whether the two groups are actually different.) This can be interpreted as incorporating the belief underlying our null hypothesis into the prior. This approach allows us to be more conservative when we do our inference. If we end up concluding that the two groups are different, we can say that the difference in behavior was so strong that it overcame our prior belief that the two groups are identical.
+With regard to priors, we have applied $\mathcal{N}(3,1)$ distributions on both group effects. The reasoning behind this is that the empirical mean of the control group (group A) is approximately $3$. By applying this prior to the treatment group (group B) we are quantifying our belief that the treatment group is not substantially different to the control group, which is our null hypothesis. (This is a reasonable belief to have since the whole purpose of the experiment is to evaluate whether the two groups are actually different.) This can be interpreted as incorporating the belief underlying our null hypothesis into the prior. More importantly, this approach allows us to be more conservative when we do our inference. If we end up concluding that the two groups are different, we can say that the difference in behavior was so strong that it overcame our prior belief that the two groups are identical. Our final model is,
+
+$$
+\begin{align*}
+y \sim &\mathcal{N}(\mu_A + \mu_B + \beta \cdot \mbox{hc}, \sigma) \\
+\mu_A \sim& \mathcal{N}(3,1) \\
+\mu_B \sim& \mathcal{N}(3,1) \\
+\beta \sim& \mathcal{N}(0,1) \\
+& \mbox{(default prior specified on } \sigma \mbox{)}
+\end{align*}
+$$
 
 Below we fit the model.
 
 ```{r results='hide'}
-fit_group_a <- stan_glm(y ~ 1,
-                        data = data.frame(y=group_a),
-                        family = gaussian(link="identity"),
-                        prior_intercept = normal(3, 1, autoscale = FALSE), seed = 123)
-fit_group_b <- stan_glm(y ~ 1,
-                        data = data.frame(y=group_b),
-                        family = gaussian(link="identity"),
-                        prior_intercept = normal(3, 1, autoscale = FALSE), seed = 123)
+fit_group <- stan_glm(y ~ 0 + group + hc,
+                      data = experiment,
+                      family = gaussian(link="identity"),
+                      prior = normal(c(3,3,0), 1, autoscale = FALSE), seed = 123)
 ```
 
-Recall that Stan uses a sampling algorithm to estimate the marginal posterior distribution of the parameters which means that we have samples instead of point estimates for the intercept values. For Group A the mean of the intercept samples is,  
+Recall that Stan uses a sampling algorithm to estimate the marginal posterior distribution of the parameters which means that we have samples instead of point estimates for the intercept values. The medians for each group after controlling for the dependent variable are,
 
 ```{r}
-coef(fit_group_a)
-```
-
-For Group B the mean of the intercept samples is,
-
-```{r}
-coef(fit_group_b)
+coef(fit_group)
 ```
 
 With these estimates it looks like Group A had an average consumption of about 3 hours while Group B had an average consumption of about 5 hours. This gives us a difference in consumption of approximately 2 hours. Unfortunately, this assessement does not say anything about how uncertain this difference is. We would like to be able to say something like "we are $p\%$ sure that the two groups are different".
@@ -154,15 +163,15 @@ overlap <- function(a, b, p = 1) {
 
 Below we compute the $0.9$ credible interval for both groups. Note that the credible interval choice is arbitrary, and may vary depending on the applied context and the appetite for uncertainty. This is also where we recommend getting input from domain-specific experts. In this case we are willing to accept a $10\%$ chance of being wrong about where the predictions lie. The closer the credible interval is to $1$ the more risk averse the business is with regards to inference.
 
-```{r fig.align='center', fig.height=5, fig.width=10}
-pp_a <- posterior_predict(fit_group_a)
-pp_b <- posterior_predict(fit_group_b)
+```{r fig.align='center', fig.height=8, fig.width=6}
+pp_a <- posterior_predict(fit_group, newdata = data.frame(group = factor("A"), hc = experiment$hc))
+pp_b <- posterior_predict(fit_group, newdata = data.frame(group = factor("B"), hc = experiment$hc))
 pp_a_quant <- quantile(pp_a, probs = c(0.05,0.95))
 pp_b_quant <- quantile(pp_b, probs = c(0.05,0.95))
 
 overlap(pp_a, pp_b, p = 0.9)
 
-par(mfrow=c(1,2))
+par(mfrow=c(2,1))
 # group A
 hist(pp_a, breaks = 50, col = '#808080', border = '#FFFFFF',
      main = "Group A",
@@ -181,11 +190,54 @@ abline(v = pp_b_quant[2], lwd = 2, col = "red")
 
 After computing the $90\%$ credible interval for both groups we find an overlap proportion of approximately $0.2$. Thus, given that we are $90\%$ sure about our posterior predictions for the two groups, we are about $80\%$ sure that the two groups are in fact different. Going back to the business context, we can conclude that we are $80\%$ sure that reducing ads increases daily streaming consumption given our acceptable risk of being $10\%$ wrong about daily streaming consumption.
 
+Since we modeled the outcome using a predictor we can vary the predictor as well as group membership for an observation for more detailed inference. Below we plot the credible intervals for each group and high consumer variable combination. This allows to us compare the difference in average streaming hours among the two groups for those individuals that were categorized as high/low consumers.
+
+```{r fig.align='center', fig.height=10, fig.width=10}
+pp_a0 <- posterior_predict(fit_group, newdata = data.frame(group = factor("A"), hc = 0))
+pp_b0 <- posterior_predict(fit_group, newdata = data.frame(group = factor("B"), hc = 0))
+pp_a1 <- posterior_predict(fit_group, newdata = data.frame(group = factor("A"), hc = 1))
+pp_b1 <- posterior_predict(fit_group, newdata = data.frame(group = factor("B"), hc = 1))
+pp_a0_quant <- quantile(pp_a0, probs = c(0.05,0.95))
+pp_b0_quant <- quantile(pp_b0, probs = c(0.05,0.95))
+pp_a1_quant <- quantile(pp_a1, probs = c(0.05,0.95))
+pp_b1_quant <- quantile(pp_b1, probs = c(0.05,0.95))
+
+par(mfrow=c(2,2))
+# group A, x = 0
+hist(pp_a0, breaks = 50, col = '#808080', border = '#FFFFFF',
+     main = "Group A (hc=0)",
+     xlab = "Avg Streaming (hrs)",
+     xlim = c(0,10))
+abline(v = pp_a0_quant[1], lwd = 2, col = "red")
+abline(v = pp_a0_quant[2], lwd = 2, col = "red")
+# group B, x = 0
+hist(pp_b0, breaks = 50, col = '#808080', border = '#FFFFFF',
+     main = "Group B (hc=0)",
+     xlab = "Avg Streaming (hrs)",
+     xlim = c(0,10))
+abline(v = pp_b0_quant[1], lwd = 2, col = "red")
+abline(v = pp_b0_quant[2], lwd = 2, col = "red")
+# group A, x = 1
+hist(pp_a1, breaks = 50, col = '#808080', border = '#FFFFFF',
+     main = "Group A (hc=1)",
+     xlab = "Avg Streaming (hrs)",
+     xlim = c(0,10))
+abline(v = pp_a1_quant[1], lwd = 2, col = "red")
+abline(v = pp_a1_quant[2], lwd = 2, col = "red")
+# group B, x = 1
+hist(pp_b1, breaks = 50, col = '#808080', border = '#FFFFFF',
+     main = "Group B (hc=1)",
+     xlab = "Avg Streaming (hrs)",
+     xlim = c(0,10))
+abline(v = pp_b1_quant[1], lwd = 2, col = "red")
+abline(v = pp_b1_quant[2], lwd = 2, col = "red")
+```
+
 In the plot below we show how the overlap proportion will vary as the credible interval varies. To put it differently, it shows how the probabilistic difference between groups varies as risk varies. Notice that the more risk we take when defining our credible interval (i.e. the closer the credible interval is to 0) the lower the overlap proportion, and consequentially the more confident we are about the difference between the two groups.
 
 ```{r fig.align='center', fig.height=5, fig.width=5}
 # credible interval probabilities
-ci_p <- rev(seq(0.1,1, by = 0.05))
+ci_p <- seq(0.1,1, by = 0.05)
 # compute proportions
 overlap_ab <- sapply(ci_p, function(s){overlap(pp_a, pp_b, s)})
 # plot
@@ -209,66 +261,28 @@ Now, suppose that the business wants to know whether a product sells better if t
 It is resonable to assume that the data is binomially distributed, in which case we can define the model for the the two groups as follows,
 
 $$
-\begin{align*}
-y_{C} \sim &\mbox{Bin}(\theta_{C},N_{C}) \\
-&\mbox{priors on } \theta_{C} \\
-y_{D} \sim &\mbox{Bin}(\theta_{D},N_{D}) \\
-&\mbox{priors on } \theta_{D} \\
-\end{align*}
+y_g \sim \mbox{Bin}(\mbox{logit}^{-1}(\mu_g), N_g)\\
 $$
-
-We can fit a model to each group independently using the [**rstan**](https://mc-stan.org/rstan/) package. This requires us to specify the model in a Stan file and then compile/fit the model with the `stan()` function. The Stan file used to represent the above model is provided below. We decided to apply a beta distribution prior on the probability parameter of the binomial distribution. 
-
-```{stan eval=FALSE, output.var='binom'}
-data {
-  int<lower=0> N;
-  int y[N];
-  int trials[N];
-  real<lower=0> shape1;
-  real<lower=0> shape2;
-}
-parameters {
-  real theta;
-}
-model {
-  target+= binomial_lpmf(y | trials, theta);
-  target+= beta_lpdf(theta | shape1, shape2);
-}
-generated quantities {
-  int y_hat[N];
-  for (n in 1:N)
-    y_hat[n] = binomial_rng(trials[n], theta);
-}
-```
-
-Below we fit this model to the data. In this case we chose the hyperparameters in the beta distribution in such a way that the prior distribution mimics the uniform distribution over support $[0,1]$.
+Below we fit this model to the data.
 
 ```{r results='hide', message=FALSE, warning=FALSE}
-group_c <- list(N = 1,
-                y = as.array(10),
-                trials = as.array(19),
-                shape1 = 1,
-                shape2 = 1)
-group_d <- list(N = 1,
-                y = as.array(14),
-                trials = as.array(22),
-                shape1 = 1,
-                shape2 = 1)
-fit_group_c <- stan("../models/binom.stan", data = group_c,
-                    chains = 4, iter = 1e3, control = list(adapt_delta = 0.95),
-                    seed = 123)
-fit_group_d <- stan("../models/binom.stan", data = group_d,
-                    chains = 4, iter = 1e3, control = list(adapt_delta = 0.95),
-                    seed = 123)
+experiment_bin <- data_frame(group = factor(c("C","D")),
+                             y = c(10,14),
+                             trials = c(19,22))
+fit_group_bin <- stan_glm(cbind(y, trials - y) ~ 0 + group, data = experiment_bin,
+                          family = binomial(link="logit"), seed = 123)
 ```
 
 Similar to the method described in the previous section we compute and plot the $90\%$ credible intervals for the posterior predictions in each group. We also compute the overlap proportion of these two sets of predictions.
 
 ```{r fig.align='center', fig.height=5, fig.width=10}
-samples_group_c <- as.matrix(fit_group_c)
-samples_group_d <- as.matrix(fit_group_d)
-pp_c <- samples_group_c[,"y_hat[1]"]
-pp_d <- samples_group_d[,"y_hat[1]"]
+# pp_c <- posterior_linpred(fit_group_bin, newdata = data.frame(group = factor("C")), transform = TRUE)
+# pp_d <- posterior_linpred(fit_group_bin, newdata = data.frame(group = factor("D")), transform = TRUE)
+# below doesn't work as expected (predictions are bigger than the number of trials)
+# pp_c <- posterior_predict(fit_group_bin, newdata = data.frame(group = factor("C"), trials = 19))
+# pp_d <- posterior_predict(fit_group_bin, newdata = data.frame(group = factor("D"), trials = 22))
+pp_c <- posterior_predict(fit_group_bin)[,1]
+pp_d <- posterior_predict(fit_group_bin)[,2]
 pp_c_quant <- quantile(pp_c, probs = c(0.05,0.95))
 pp_d_quant <- quantile(pp_d, probs = c(0.05,0.95))
 
@@ -376,6 +390,8 @@ Recall that Frequentist methods of hypothesis testing involve constructing a tes
 As an example consider the data associated with Group A and Group B in the continuous data section. The null hypothesis is whether the two groups have equal means. Below we compute the test statistic and p-value given the data.
 
 ```{r}
+group_a <- experiment %>% filter(group == "A") %>% select(y) %>% unlist %>% unname
+group_b <- experiment %>% filter(group == "B") %>% select(y) %>% unlist %>% unname
 t_test <- t.test(x=group_a, y=group_b)
 t_stat <- abs(t_test$statistic)
 p_value <- t_test$p.value
@@ -411,3 +427,7 @@ Given the small p-value we can make the following sequence of conclusions:
 3. Therefore the null must be invalid and can be rejected, allowing us to conclude that the two groups are different.
 
 Notice how far removed we are from the data and the observed data generation process. Once we calculate the test statistic we step away from the distribution of the data itself and start dealing with the distribution of the test statistic under the null. We were also unable to encode any prior belief or business knowledge into our inference.
+
+## Appendix B: Hierarchical Groups
+
+First model using `stan_glmer`.
